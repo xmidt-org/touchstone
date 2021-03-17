@@ -1,0 +1,124 @@
+package touchhttp
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/fx"
+)
+
+const (
+	// HTTPErrorOnError is the value allowed for Config.ErrorHandling that maps
+	// to promhttp.HTTPErrorOnError.  This is also the default used when no
+	// value is set.
+	HTTPErrorOnError = "http"
+
+	// ContinueOnError is the value allowed for Config.ErrorHandler that maps
+	// to promhttp.ContineOnError.
+	ContinueOnError = "continue"
+
+	// PanicOnError is the value allowed for Config.ErrorHandler that maps
+	// to promhttp.PanicOnError.
+	PanicOnError = "panic"
+)
+
+// ErrorPrinter adapts an fx.Printer and allows it to be used as
+// an error Logger for prometheus.
+type ErrorPrinter struct {
+	fx.Printer
+}
+
+// Println satisfies the promhttp.Logger interface.
+func (ep ErrorPrinter) Println(values ...interface{}) {
+	var msg strings.Builder
+
+	// we want Fprintln behavior, but we don't want the trailing newline
+	for i, v := range values {
+		if i > 0 {
+			msg.WriteRune(' ')
+		}
+
+		fmt.Fprint(&msg, v)
+	}
+
+	ep.Printer.Printf(msg.String())
+}
+
+// InvalidErrorHandlingError is the error returned when Config.ErrorHandling
+// is not a recognized value.
+type InvalidErrorHandlingError struct {
+	// Value is the unrecognized Config.ErrorHandling value.
+	Value string
+}
+
+// Error satisfies the error interface.
+func (e *InvalidErrorHandlingError) Error() string {
+	return fmt.Sprintf("Invalid ErrorHandling value: %s", e.Value)
+}
+
+// Config is the configuration for boostrapping the promhttp package.
+type Config struct {
+	// ErrorHandling is the promhttp.HandlerErrorHandling value.  If this field
+	// is unset, promhttp.HTTPErrorOnError is used.
+	//
+	// See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus/promhttp#HandlerErrorHandling
+	ErrorHandling string `json:"errorHandling" yaml:"errorHandling"`
+
+	// DisableCompression disables compression on metrics output.
+	DisableCompression bool `json:"disableCompression" yaml:"disableCompression"`
+
+	// MaxRequestsInFlight controls the number of concurrent HTTP metrics requests.
+	MaxRequestsInFlight int `json:"maxRequestsInFlight" yaml:"maxRequestsInFlight"`
+
+	// Timeout is the time period after which the handler will return a 503.
+	Timeout time.Duration `json:"timeout" yaml:"timeout"`
+
+	// EnableOpenMetrics controls whether open metrics encoding is available
+	// during content negotiation.
+	EnableOpenMetrics bool `json:"enableOpenMetrics" yaml:"enableOpenMetrics"`
+
+	// InstrumentMetricHandler indicates whether the http.Handler that renders
+	// prometheus metrics will itself be decorated with metrics.
+	//
+	// See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus/promhttp#InstrumentMetricHandler
+	InstrumentMetricHandler bool `json:"instrumentMetricHandler" yaml:"instrumentMetricHandler"`
+}
+
+// NewHandlerOpts creates a basic HandlerOpts from an Config configuration.
+func NewHandlerOpts(cfg Config, p fx.Printer, r prometheus.Registerer) (opts promhttp.HandlerOpts, err error) {
+	opts = promhttp.HandlerOpts{
+		DisableCompression:  cfg.DisableCompression,
+		MaxRequestsInFlight: cfg.MaxRequestsInFlight,
+		Timeout:             cfg.Timeout,
+		EnableOpenMetrics:   cfg.EnableOpenMetrics,
+		Registry:            r,
+	}
+
+	if p != nil {
+		opts.ErrorLog = ErrorPrinter{Printer: p}
+	}
+
+	// NOTE: no action is needed for the default case, as the zero value for
+	// promhttp.HandlerErrorHandling is the same as this package's default.
+	switch cfg.ErrorHandling {
+	case "":
+		// take the zero value
+
+	case HTTPErrorOnError:
+		// take the zero value
+
+	case ContinueOnError:
+		opts.ErrorHandling = promhttp.ContinueOnError
+
+	case PanicOnError:
+		opts.ErrorHandling = promhttp.PanicOnError
+
+	default:
+		err = &InvalidErrorHandlingError{Value: cfg.ErrorHandling}
+	}
+
+	return
+}
