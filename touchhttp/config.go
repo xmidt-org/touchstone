@@ -17,7 +17,7 @@ const (
 	HTTPErrorOnError = "http"
 
 	// ContinueOnError is the value allowed for Config.ErrorHandler that maps
-	// to promhttp.ContineOnError.
+	// to promhttp.ContinueOnError.
 	ContinueOnError = "continue"
 
 	// PanicOnError is the value allowed for Config.ErrorHandler that maps
