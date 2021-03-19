@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// clock is a known now() imlementation that can produce
+// clock is a known now() implementation that can produce
 // consistent, expected durations for metrics assertions.
 type clock struct {
 	start    time.Time
