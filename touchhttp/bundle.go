@@ -66,19 +66,25 @@ const (
 	MetricClientErrorCount = "client_error_count"
 )
 
-// metricHelp holds the Help text for each bundled metric.
-var metricHelp = map[string]string{
-	MetricServerRequestCount:     "the total number of requests received since startup",
-	MetricServerRequestDuration:  "the request duration in milliseconds",
-	MetricServerRequestsInFlight: "the instantaneous number of requests currently being handled",
-	MetricServerRequestSize:      "the size of handled requests in bytes",
+var (
+	// durationBuckets is the slice of buckets for the request duration histogram.
+	// TODO: make this and other *Opt structs configurable.
+	durationBuckets = []float64{62.5, 125, 250, 500, 1000, 5000, 10000, 20000, 40000, 80000, 160000}
 
-	MetricClientRequestCount:     "the total number of requests sent since startup",
-	MetricClientRequestDuration:  "the total time, in milliseconds, between sending a request and receiving a response",
-	MetricClientRequestsInFlight: "the instantaneous number of requests currently pending",
-	MetricClientRequestSize:      "the size of outgoing requests in bytes",
-	MetricClientErrorCount:       "the total number of errors (nil responses) since startup",
-}
+	// metricHelp holds the Help text for each bundled metric.
+	metricHelp = map[string]string{
+		MetricServerRequestCount:     "the total number of requests received since startup",
+		MetricServerRequestDuration:  "the request duration in milliseconds",
+		MetricServerRequestsInFlight: "the instantaneous number of requests currently being handled",
+		MetricServerRequestSize:      "the size of handled requests in bytes",
+
+		MetricClientRequestCount:     "the total number of requests sent since startup",
+		MetricClientRequestDuration:  "the total time, in milliseconds, between sending a request and receiving a response",
+		MetricClientRequestsInFlight: "the instantaneous number of requests currently pending",
+		MetricClientRequestSize:      "the size of outgoing requests in bytes",
+		MetricClientErrorCount:       "the total number of errors (nil responses) since startup",
+	}
+)
 
 // recognizedMethods is the set of HTTP methods that are defined by the spec(s).
 // Any method not in this map gets recorded as MethodUnknown.
@@ -240,8 +246,9 @@ func NewServerBundle(f *touchstone.Factory, now func() time.Time) (sb ServerBund
 	if err == nil {
 		sb.duration, err = f.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name: MetricServerRequestDuration,
-				Help: metricHelp[MetricServerRequestDuration],
+				Name:    MetricServerRequestDuration,
+				Help:    metricHelp[MetricServerRequestDuration],
+				Buckets: durationBuckets,
 			}, ServerLabel, CodeLabel, MethodLabel,
 		)
 	}
