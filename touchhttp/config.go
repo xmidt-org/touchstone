@@ -101,14 +101,13 @@ func NewHandlerOpts(cfg Config, p fx.Printer, r prometheus.Registerer) (opts pro
 		opts.ErrorLog = ErrorPrinter{Printer: p}
 	}
 
-	// NOTE: no action is needed for the default case, as the zero value for
-	// promhttp.HandlerErrorHandling is the same as this package's default.
 	switch cfg.ErrorHandling {
 	case "":
-		// take the zero value
+		// NOTE: Can just take the zero value here, since this package uses the same
+		// default value as promhttp
 
 	case HTTPErrorOnError:
-		// take the zero value
+		// this is just explicitly setting the error handling to the default
 
 	case ContinueOnError:
 		opts.ErrorHandling = promhttp.ContinueOnError
