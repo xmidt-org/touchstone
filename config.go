@@ -35,9 +35,9 @@ type Config struct {
 func New(cfg Config) (g prometheus.Gatherer, r prometheus.Registerer, err error) {
 	var pr *prometheus.Registry
 	if cfg.Pedantic {
-		pr = prometheus.NewRegistry()
-	} else {
 		pr = prometheus.NewPedanticRegistry()
+	} else {
+		pr = prometheus.NewRegistry()
 	}
 
 	if !cfg.DisableGoCollector {
