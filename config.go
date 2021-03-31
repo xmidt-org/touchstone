@@ -14,20 +14,26 @@ type Config struct {
 
 	// Pedantic controls whether a pedantic Registerer is used as the prometheus backend.
 	//
-	// See https://godoc.org/github.com/prometheus/client_golang/prometheus#NewPedanticRegistry
+	// See: https://godoc.org/github.com/prometheus/client_golang/prometheus#NewPedanticRegistry
 	Pedantic bool `json:"pedantic" yaml:"pedantic"`
 
 	// DisableGoCollector controls whether the go collector is registered on startup.
 	// By default, the go collector is registered.
 	//
-	// See https://godoc.org/github.com/prometheus/client_golang/prometheus#NewGoCollector
+	// See: https://godoc.org/github.com/prometheus/client_golang/prometheus#NewGoCollector
 	DisableGoCollector bool `json:"disableGoCollector" yaml:"disableGoCollector"`
 
 	// DisableProcessCollector controls whether the process collector is registered on startup.
 	// By default, this collector is registered.
 	//
-	// See https://godoc.org/github.com/prometheus/client_golang/prometheus#NewProcessCollector
+	// See: https://godoc.org/github.com/prometheus/client_golang/prometheus#NewProcessCollector
 	DisableProcessCollector bool `json:"disableProcessCollector" yaml:"disableProcessCollector"`
+
+	// DisableBuildInfoCollector controls whether the build info collector is registered on startup.
+	// By default, this collector is registered.
+	//
+	// See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#NewBuildInfoCollector
+	DisableBuildInfoCollector bool `json:"disableBuildInfoCollector" yaml:"disableBuildInfoCollector"`
 }
 
 // New bootstraps a prometheus registry given a Config instance.  Note that the
@@ -52,6 +58,10 @@ func New(cfg Config) (g prometheus.Gatherer, r prometheus.Registerer, err error)
 				},
 			),
 		)
+	}
+
+	if err == nil && !cfg.DisableBuildInfoCollector {
+		err = pr.Register(prometheus.NewBuildInfoCollector())
 	}
 
 	if err == nil {
