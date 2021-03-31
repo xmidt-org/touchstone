@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// Assertions is a set of test verifications for metrics.  Principally,
+// this involves comparisons against an expected Gatherer.
 type Assertions struct {
 	buffer bytes.Buffer
 	names  map[string]bool
@@ -19,6 +21,7 @@ type Assertions struct {
 	require *require.Assertions
 }
 
+// New creates an Assertions for the given testing environment.
 func New(t require.TestingT) *Assertions {
 	return &Assertions{
 		assert:  assert.New(t),
@@ -26,6 +29,7 @@ func New(t require.TestingT) *Assertions {
 	}
 }
 
+// NewSuite creates an Assertions for the given testing suite.
 func NewSuite(s suite.TestingSuite) *Assertions {
 	return New(s.T())
 }
@@ -62,6 +66,8 @@ func (a *Assertions) Expect(g prometheus.Gatherer) *Assertions {
 // GatherAndCompare compares the actual Gatherer against the current expectation
 // previously set with Expect.  This method fails the test on any error, then returns false.
 // This method returns true if the expectation was met.
+//
+// Use this method to run an assertion against an entire prometheus registry.
 func (a *Assertions) GatherAndCompare(actual prometheus.Gatherer, metricNames ...string) bool {
 	err := testutil.GatherAndCompare(
 		actual,
@@ -71,7 +77,7 @@ func (a *Assertions) GatherAndCompare(actual prometheus.Gatherer, metricNames ..
 
 	return a.assert.NoErrorf(
 		err,
-		"Failed to match expected metrics", "names: %s",
+		"Failed to match expected metrics: %s",
 		metricNames,
 	)
 }
@@ -79,6 +85,9 @@ func (a *Assertions) GatherAndCompare(actual prometheus.Gatherer, metricNames ..
 // CollectAndCompare compares the actual collector against the current expectation
 // previously set with Expect.  This method fails the test on any error, then returns false.
 // This method returns true if the expectation was met.
+//
+// Use this method to run an assertion against a single metric that optionally has
+// multiple submetrics.
 func (a *Assertions) CollectAndCompare(actual prometheus.Collector, metricNames ...string) bool {
 	err := testutil.CollectAndCompare(
 		actual,
@@ -98,7 +107,7 @@ func (a *Assertions) CollectAndCompare(actual prometheus.Collector, metricNames 
 func (a *Assertions) Registered(metricNames ...string) bool {
 	passed := true
 	for _, n := range metricNames {
-		passed = passed && a.assert.Truef(a.names[n], "Metric SHOULD BE registered", "name: %s", n)
+		passed = a.assert.Truef(a.names[n], "Metric SHOULD BE registered: %s", n) && passed
 	}
 
 	return passed
@@ -109,7 +118,7 @@ func (a *Assertions) Registered(metricNames ...string) bool {
 func (a *Assertions) NotRegistered(metricNames ...string) bool {
 	passed := true
 	for _, n := range metricNames {
-		passed = passed && a.assert.Falsef(a.names[n], "Metric SHOULD NOT BE registered", "name: %s", n)
+		passed = a.assert.Falsef(a.names[n], "Metric SHOULD NOT BE registered: %s", n) && passed
 	}
 
 	return passed
