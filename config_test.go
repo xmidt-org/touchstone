@@ -51,8 +51,9 @@ func (suite *NewTestSuite) TestPedantic() {
 
 func (suite *NewTestSuite) TestDisableStandardCollectors() {
 	g, r, err := New(Config{
-		DisableGoCollector:      true,
-		DisableProcessCollector: true,
+		DisableGoCollector:        true,
+		DisableProcessCollector:   true,
+		DisableBuildInfoCollector: true,
 	})
 
 	suite.NoError(err)
