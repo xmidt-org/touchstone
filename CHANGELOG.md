@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - added the build info collector
-- go-kit integration
+- go-kit integration [#6](https://github.com/xmidt-org/touchstone/pull/6)
 - touchtest package with useful testing assertions and utilities
 
 ## [v0.0.1]
