@@ -3,8 +3,8 @@ module github.com/xmidt-org/touchstone
 go 1.15
 
 require (
+	github.com/go-kit/kit v0.10.0
 	github.com/golang/protobuf v1.5.1 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/common v0.19.0
 	github.com/stretchr/objx v0.3.0 // indirect

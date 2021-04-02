@@ -5,6 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/suite"
+	"github.com/xmidt-org/touchstone/touchtest"
 )
 
 type FactoryTestSuite struct {
@@ -16,8 +17,8 @@ func (suite *FactoryTestSuite) Printf(format string, arguments ...interface{}) {
 	suite.T().Logf(format, arguments...)
 }
 
-func (suite *FactoryTestSuite) newFactory(cfg Config) (*Factory, prometheus.Registerer) {
-	_, r, err := New(cfg)
+func (suite *FactoryTestSuite) newFactory(cfg Config) (*Factory, prometheus.Gatherer, prometheus.Registerer) {
+	g, r, err := New(cfg)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(r)
 
@@ -25,31 +26,12 @@ func (suite *FactoryTestSuite) newFactory(cfg Config) (*Factory, prometheus.Regi
 	suite.Require().NotNil(f)
 	suite.Equal(cfg.DefaultNamespace, f.DefaultNamespace())
 	suite.Equal(cfg.DefaultSubsystem, f.DefaultSubsystem())
-	return f, r
+	return f, g, r
 }
 
-func (suite *FactoryTestSuite) metricPresent(r prometheus.Registerer, o prometheus.Opts) {
-	suite.Error(
-		r.Register(
-			// it doesn't matter what kind of metric we try to register,
-			// as long as it's a duplicate
-			prometheus.NewCounter(prometheus.CounterOpts(o)),
-		),
-		"A metric with the name [%s] SHOULD exist",
-		prometheus.BuildFQName(o.Namespace, o.Subsystem, o.Name),
-	)
-}
-
-func (suite *FactoryTestSuite) metricAbsent(r prometheus.Registerer, o prometheus.Opts) {
-	suite.NoError(
-		r.Register(
-			// it doesn't matter what kind of metric we try to register,
-			// as long as it's a duplicate
-			prometheus.NewCounter(prometheus.CounterOpts(o)),
-		),
-		"A metric with the name [%s] SHOULD NOT exist",
-		prometheus.BuildFQName(o.Namespace, o.Subsystem, o.Name),
-	)
+func (suite *FactoryTestSuite) newAssertions(g prometheus.Gatherer) *touchtest.Assertions {
+	a := touchtest.NewSuite(suite)
+	return a.Expect(g)
 }
 
 func (suite *FactoryTestSuite) labelsPresent(v interface{}, l prometheus.Labels) {
@@ -81,24 +63,24 @@ func (suite *FactoryTestSuite) labelsPresent(v interface{}, l prometheus.Labels)
 
 func (suite *FactoryTestSuite) TestNewCounter() {
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewCounter(prometheus.CounterOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewCounter(prometheus.CounterOpts{Name: "test"})
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -107,12 +89,13 @@ func (suite *FactoryTestSuite) TestNewCounter() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -124,9 +107,10 @@ func (suite *FactoryTestSuite) TestNewCounter() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
@@ -134,24 +118,24 @@ func (suite *FactoryTestSuite) TestNewCounterFunc() {
 	fn := func() float64 { return 1.0 }
 
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewCounterFunc(prometheus.CounterOpts{}, fn)
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewCounterFunc(prometheus.CounterOpts{Name: "test"}, fn)
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -160,12 +144,13 @@ func (suite *FactoryTestSuite) TestNewCounterFunc() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -178,32 +163,33 @@ func (suite *FactoryTestSuite) TestNewCounterFunc() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
 func (suite *FactoryTestSuite) TestNewCounterVec() {
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewCounterVec(prometheus.CounterOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewCounterVec(prometheus.CounterOpts{Name: "test"}, "label1")
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -212,12 +198,13 @@ func (suite *FactoryTestSuite) TestNewCounterVec() {
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -230,32 +217,33 @@ func (suite *FactoryTestSuite) TestNewCounterVec() {
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
 func (suite *FactoryTestSuite) TestNewGauge() {
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewGauge(prometheus.GaugeOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewGauge(prometheus.GaugeOpts{Name: "test"})
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -264,12 +252,13 @@ func (suite *FactoryTestSuite) TestNewGauge() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -281,9 +270,10 @@ func (suite *FactoryTestSuite) TestNewGauge() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
@@ -291,24 +281,24 @@ func (suite *FactoryTestSuite) TestNewGaugeFunc() {
 	fn := func() float64 { return 1.0 }
 
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewGaugeFunc(prometheus.GaugeOpts{}, fn)
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewGaugeFunc(prometheus.GaugeOpts{Name: "test"}, fn)
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -317,12 +307,13 @@ func (suite *FactoryTestSuite) TestNewGaugeFunc() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -335,32 +326,33 @@ func (suite *FactoryTestSuite) TestNewGaugeFunc() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
 func (suite *FactoryTestSuite) TestNewGaugeVec() {
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewGaugeVec(prometheus.GaugeOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewGaugeVec(prometheus.GaugeOpts{Name: "test"}, "label1")
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -369,12 +361,13 @@ func (suite *FactoryTestSuite) TestNewGaugeVec() {
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -387,9 +380,10 @@ func (suite *FactoryTestSuite) TestNewGaugeVec() {
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
@@ -397,24 +391,24 @@ func (suite *FactoryTestSuite) TestNewUntypedFunc() {
 	fn := func() float64 { return 1.0 }
 
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewUntypedFunc(prometheus.UntypedOpts{}, fn)
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewUntypedFunc(prometheus.UntypedOpts{Name: "test"}, fn)
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -423,12 +417,13 @@ func (suite *FactoryTestSuite) TestNewUntypedFunc() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -441,32 +436,33 @@ func (suite *FactoryTestSuite) TestNewUntypedFunc() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
 func (suite *FactoryTestSuite) TestNewHistogram() {
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewHistogram(prometheus.HistogramOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewHistogram(prometheus.HistogramOpts{Name: "test"})
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -475,12 +471,13 @@ func (suite *FactoryTestSuite) TestNewHistogram() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -492,32 +489,33 @@ func (suite *FactoryTestSuite) TestNewHistogram() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
 func (suite *FactoryTestSuite) TestNewHistogramVec() {
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewHistogramVec(prometheus.HistogramOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewHistogramVec(prometheus.HistogramOpts{Name: "test"}, "label1")
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -526,12 +524,13 @@ func (suite *FactoryTestSuite) TestNewHistogramVec() {
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -544,32 +543,33 @@ func (suite *FactoryTestSuite) TestNewHistogramVec() {
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
 func (suite *FactoryTestSuite) TestNewSummary() {
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewSummary(prometheus.SummaryOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewSummary(prometheus.SummaryOpts{Name: "test"})
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -578,12 +578,13 @@ func (suite *FactoryTestSuite) TestNewSummary() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -595,32 +596,33 @@ func (suite *FactoryTestSuite) TestNewSummary() {
 		suite.NoError(err)
 		suite.NotNil(m)
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
 func (suite *FactoryTestSuite) TestNewSummaryVec() {
 	suite.Run("NoName", func() {
-		f, _ := suite.newFactory(Config{})
+		f, _, _ := suite.newFactory(Config{})
 		m, err := f.NewSummaryVec(prometheus.SummaryOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, r := suite.newFactory(Config{})
+		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewSummaryVec(prometheus.SummaryOpts{Name: "test"}, "label1")
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "namespace", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered("test")
 	})
 
 	suite.Run("Defaults", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -629,12 +631,13 @@ func (suite *FactoryTestSuite) TestNewSummaryVec() {
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+		ma.NotRegistered("test")
 	})
 
 	suite.Run("Overrides", func() {
-		f, r := suite.newFactory(Config{
+		f, g, _ := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -647,9 +650,10 @@ func (suite *FactoryTestSuite) TestNewSummaryVec() {
 		suite.NoError(err)
 		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
 
-		suite.metricPresent(r, prometheus.Opts{Namespace: "o1", Subsystem: "o2", Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Name: "test"})
-		suite.metricAbsent(r, prometheus.Opts{Namespace: "n", Subsystem: "s", Name: "test"})
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
+		ma.NotRegistered("test")
+		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 
