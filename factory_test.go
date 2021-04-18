@@ -1,6 +1,7 @@
 package touchstone
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -34,7 +35,15 @@ func (suite *FactoryTestSuite) newAssertions(g prometheus.Gatherer) *touchtest.A
 	return a.Expect(g)
 }
 
-func (suite *FactoryTestSuite) labelsPresent(v interface{}, l prometheus.Labels) {
+// labelsPresent checks that the given metric has a series of label names.
+// Note that this method typically must be used before a *touchtest.Assertions,
+// since the act of getting a metric with labels causes it to show up in the gatherer.
+func (suite *FactoryTestSuite) labelsPresent(v interface{}, labelNames ...string) {
+	l := make(prometheus.Labels, len(labelNames))
+	for i, labelName := range labelNames {
+		l[labelName] = "value" + strconv.Itoa(i)
+	}
+
 	suite.Require().NotNil(v)
 	var vec *prometheus.MetricVec
 
@@ -59,6 +68,148 @@ func (suite *FactoryTestSuite) labelsPresent(v interface{}, l prometheus.Labels)
 	m, err := vec.GetMetricWith(l)
 	suite.NoError(err, "The metric should have had the labels: %v", l)
 	suite.NotNil(m, "The metric should have had the labels: %v", l)
+}
+
+func (suite *FactoryTestSuite) TestNew() {
+	suite.Run("InvalidOpts", func() {
+		f, _, _ := suite.newFactory(Config{})
+		suite.Panics(func() {
+			f.New(123)
+		})
+	})
+
+	suite.Run("Counter", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.New(prometheus.CounterOpts{Name: "test", Help: "test"})
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.Implements((*prometheus.Counter)(nil), m)
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+
+	suite.Run("Gauge", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.New(prometheus.GaugeOpts{Name: "test", Help: "test"})
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.Implements((*prometheus.Gauge)(nil), m)
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+
+	suite.Run("Histogram", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.New(prometheus.HistogramOpts{Name: "test", Help: "test"})
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.Implements((*prometheus.Histogram)(nil), m)
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+
+	suite.Run("Summary", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.New(prometheus.SummaryOpts{Name: "test", Help: "test"})
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.Implements((*prometheus.Summary)(nil), m)
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+}
+
+func (suite *FactoryTestSuite) TestNewVec() {
+	suite.Run("InvalidOpts", func() {
+		f, _, _ := suite.newFactory(Config{})
+		suite.Panics(func() {
+			f.NewVec(123)
+		})
+	})
+
+	suite.Run("CounterVec", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.NewVec(prometheus.CounterOpts{Name: "test", Help: "test"}, "label1", "label2")
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.IsType((*prometheus.CounterVec)(nil), m)
+		suite.labelsPresent(m, "label1", "label2")
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+
+	suite.Run("GaugeVec", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.NewVec(prometheus.GaugeOpts{Name: "test", Help: "test"}, "label1", "label2")
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.IsType((*prometheus.GaugeVec)(nil), m)
+		suite.labelsPresent(m, "label1", "label2")
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+
+	suite.Run("HistogramVec", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.NewVec(prometheus.HistogramOpts{Name: "test", Help: "test"}, "label1", "label2")
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.IsType((*prometheus.HistogramVec)(nil), m)
+		suite.labelsPresent(m, "label1", "label2")
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+
+	suite.Run("SummaryVec", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.NewVec(prometheus.SummaryOpts{Name: "test", Help: "test"}, "label1", "label2")
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.IsType((*prometheus.SummaryVec)(nil), m)
+		suite.labelsPresent(m, "label1", "label2")
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
 }
 
 func (suite *FactoryTestSuite) TestNewCounter() {
@@ -182,7 +333,7 @@ func (suite *FactoryTestSuite) TestNewCounterVec() {
 		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewCounterVec(prometheus.CounterOpts{Name: "test"}, "label1")
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered("test")
@@ -196,7 +347,7 @@ func (suite *FactoryTestSuite) TestNewCounterVec() {
 
 		m, err := f.NewCounterVec(prometheus.CounterOpts{Name: "test"}, "label1")
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
@@ -215,7 +366,7 @@ func (suite *FactoryTestSuite) TestNewCounterVec() {
 		)
 
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
@@ -345,7 +496,7 @@ func (suite *FactoryTestSuite) TestNewGaugeVec() {
 		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewGaugeVec(prometheus.GaugeOpts{Name: "test"}, "label1")
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered("test")
@@ -359,7 +510,7 @@ func (suite *FactoryTestSuite) TestNewGaugeVec() {
 
 		m, err := f.NewGaugeVec(prometheus.GaugeOpts{Name: "test"}, "label1")
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
@@ -378,7 +529,7 @@ func (suite *FactoryTestSuite) TestNewGaugeVec() {
 		)
 
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
@@ -508,7 +659,7 @@ func (suite *FactoryTestSuite) TestNewHistogramVec() {
 		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewHistogramVec(prometheus.HistogramOpts{Name: "test"}, "label1")
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered("test")
@@ -522,7 +673,7 @@ func (suite *FactoryTestSuite) TestNewHistogramVec() {
 
 		m, err := f.NewHistogramVec(prometheus.HistogramOpts{Name: "test"}, "label1")
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
@@ -541,7 +692,7 @@ func (suite *FactoryTestSuite) TestNewHistogramVec() {
 		)
 
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
@@ -615,7 +766,7 @@ func (suite *FactoryTestSuite) TestNewSummaryVec() {
 		f, g, _ := suite.newFactory(Config{})
 		m, err := f.NewSummaryVec(prometheus.SummaryOpts{Name: "test"}, "label1")
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered("test")
@@ -629,7 +780,7 @@ func (suite *FactoryTestSuite) TestNewSummaryVec() {
 
 		m, err := f.NewSummaryVec(prometheus.SummaryOpts{Name: "test"}, "label1")
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
@@ -648,12 +799,92 @@ func (suite *FactoryTestSuite) TestNewSummaryVec() {
 		)
 
 		suite.NoError(err)
-		suite.labelsPresent(m, prometheus.Labels{"label1": "value1"})
+		suite.labelsPresent(m, "label1")
 
 		ma := suite.newAssertions(g)
 		ma.Registered(prometheus.BuildFQName("o1", "o2", "test"))
 		ma.NotRegistered("test")
 		ma.NotRegistered(prometheus.BuildFQName("n", "s", "test"))
+	})
+}
+
+func (suite *FactoryTestSuite) TestNewObserver() {
+	suite.Run("InvalidOpts", func() {
+		f, _, _ := suite.newFactory(Config{})
+		suite.Panics(func() {
+			f.NewObserver(prometheus.CounterOpts{})
+		})
+	})
+
+	suite.Run("Histogram", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.NewObserver(prometheus.HistogramOpts{Name: "test", Help: "test"})
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.Implements((*prometheus.Histogram)(nil), m)
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+
+	suite.Run("Summary", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.NewObserver(prometheus.SummaryOpts{Name: "test", Help: "test"})
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.Implements((*prometheus.Summary)(nil), m)
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+}
+
+func (suite *FactoryTestSuite) TestNewObserverVec() {
+	suite.Run("InvalidOpts", func() {
+		f, _, _ := suite.newFactory(Config{})
+		suite.Panics(func() {
+			f.NewObserverVec(prometheus.CounterOpts{})
+		})
+	})
+
+	suite.Run("HistogramVec", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.NewObserverVec(prometheus.HistogramOpts{Name: "test", Help: "test"}, "label1", "label2")
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.IsType((*prometheus.HistogramVec)(nil), m)
+		suite.labelsPresent(m, "label1", "label2")
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
+	})
+
+	suite.Run("SummaryVec", func() {
+		f, g, _ := suite.newFactory(Config{
+			DefaultNamespace: "n",
+			DefaultSubsystem: "s",
+		})
+
+		m, err := f.NewObserverVec(prometheus.SummaryOpts{Name: "test", Help: "test"}, "label1", "label2")
+		suite.NoError(err)
+		suite.NotNil(m)
+		suite.IsType((*prometheus.SummaryVec)(nil), m)
+		suite.labelsPresent(m, "label1", "label2")
+
+		ma := suite.newAssertions(g)
+		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
 	})
 }
 

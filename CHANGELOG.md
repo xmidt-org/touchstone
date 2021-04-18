@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 - utility methods for dealing with prometheus.AlreadyRegisteredError
+- dynamically-typed metric Factory methods
 
 ## [v0.0.2]
 
