@@ -2,6 +2,7 @@ package touchstone
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/fx"
@@ -93,6 +94,76 @@ func (f *Factory) DefaultNamespace() string {
 // empty to indicate that there is no default.
 func (f *Factory) DefaultSubsystem() string {
 	return f.defaultSubsystem
+}
+
+// New creates a dynamically typed metric based on the concrete type passed as options.
+// For example, if passed a prometheus.CounterOpts, this method creates and registers
+// a prometheus.Counter.
+//
+// The o parameter must be one of the following, or this method panics:
+//
+//   - prometheus.CounterOpts
+//   - prometheus.GaugeOpts
+//   - prometheus.HistogramOpts
+//   - prometheus.SummaryOpts
+func (f *Factory) New(o interface{}) (m prometheus.Collector, err error) {
+	switch opts := o.(type) {
+	case prometheus.CounterOpts:
+		m, err = f.NewCounter(opts)
+
+	case prometheus.GaugeOpts:
+		m, err = f.NewGauge(opts)
+
+	case prometheus.HistogramOpts:
+		var obs prometheus.Observer
+		obs, err = f.NewHistogram(opts)
+		if err == nil {
+			m = obs.(prometheus.Collector)
+		}
+
+	case prometheus.SummaryOpts:
+		var obs prometheus.Observer
+		obs, err = f.NewSummary(opts)
+		if err == nil {
+			m = obs.(prometheus.Collector)
+		}
+
+	default:
+		panic(fmt.Errorf("%T is not a recognized prometheus xxxOpts struct", o))
+	}
+
+	return
+}
+
+// NewVec creates a dynamically typed metric vector based on the concrete type passed as options.
+// For example, if passed a prometheus.CounterOpts, this method creates and registers
+// a *prometheus.CounterVec.
+//
+// The o parameter must be one of the following, or this method panics:
+//
+//   - prometheus.CounterOpts
+//   - prometheus.GaugeOpts
+//   - prometheus.HistogramOpts
+//   - prometheus.SummaryOpts
+func (f *Factory) NewVec(o interface{}, labelNames ...string) (m prometheus.Collector, err error) {
+	switch opts := o.(type) {
+	case prometheus.CounterOpts:
+		m, err = f.NewCounterVec(opts, labelNames...)
+
+	case prometheus.GaugeOpts:
+		m, err = f.NewGaugeVec(opts, labelNames...)
+
+	case prometheus.HistogramOpts:
+		m, err = f.NewHistogramVec(opts, labelNames...)
+
+	case prometheus.SummaryOpts:
+		m, err = f.NewSummaryVec(opts, labelNames...)
+
+	default:
+		panic(fmt.Errorf("%T is not a recognized prometheus xxxOpts struct", o))
+	}
+
+	return
 }
 
 // NewCounter creates and registers a new counter using the supplied options.
@@ -318,6 +389,42 @@ func (f *Factory) NewSummaryVec(o prometheus.SummaryOpts, labelNames ...string) 
 		s := prometheus.NewSummaryVec(o, labelNames)
 		m = s
 		err = f.registerer.Register(s)
+	}
+
+	return
+}
+
+// NewObserver creates a histogram or a summary, depending on the concrete type
+// of the first parameter.  This method panics if o is not a prometheus.HistogramOpts
+// or a prometheus.SummaryOpts.
+func (f *Factory) NewObserver(o interface{}) (m prometheus.Observer, err error) {
+	switch opts := o.(type) {
+	case prometheus.HistogramOpts:
+		m, err = f.NewHistogram(opts)
+
+	case prometheus.SummaryOpts:
+		m, err = f.NewSummary(opts)
+
+	default:
+		panic(fmt.Errorf("%T is not a prometheus.HistogramOpts or a prometheus.SummaryOpts", o))
+	}
+
+	return
+}
+
+// NewObserverVec creates a histogram vector or a summary vector, depending on the concrete
+// type of the first parameter.  This method panics if o is not a prometheus.HistogramOpts
+// or a prometheus.SummaryOpts.
+func (f *Factory) NewObserverVec(o interface{}, labelNames ...string) (m prometheus.ObserverVec, err error) {
+	switch opts := o.(type) {
+	case prometheus.HistogramOpts:
+		m, err = f.NewHistogramVec(opts, labelNames...)
+
+	case prometheus.SummaryOpts:
+		m, err = f.NewSummaryVec(opts, labelNames...)
+
+	default:
+		panic(fmt.Errorf("%T is not a prometheus.HistogramOpts or a prometheus.SummaryOpts", o))
 	}
 
 	return
