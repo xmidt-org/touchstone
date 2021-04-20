@@ -26,17 +26,17 @@ var (
 //     - an arbitrary interface
 func CollectorAs(c prometheus.Collector, target interface{}) bool {
 	if target == nil {
-		panic("touchstone: target must not be a nil interface")
+		panic("touchstone.CollectorAs: target must not be a nil interface")
 	}
 
 	tValue := reflect.ValueOf(target)
 	if tValue.Kind() != reflect.Ptr || tValue.IsNil() {
-		panic("touchstone: target must be a non-nil pointer")
+		panic("touchstone.CollectorAs: target must be a non-nil pointer")
 	}
 
 	tElem := tValue.Elem()
 	if tElem.Kind() != reflect.Interface && !tElem.Type().Implements(collectorType) {
-		panic("touchstone: *target must either (1) be an interface or (2) implement prometheus.Collector")
+		panic("touchstone.CollectorAs: *target must either (1) be an interface or (2) implement prometheus.Collector")
 	}
 
 	cvalue := reflect.ValueOf(c)
