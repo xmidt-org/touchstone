@@ -30,19 +30,20 @@ var (
 //
 // See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus/promauto
 type Factory struct {
-	defaultNamespace string
-	defaultSubsystem string
-	printer          fx.Printer
-	registerer       prometheus.Registerer
+	defaults   prometheus.Opts
+	printer    fx.Printer
+	registerer prometheus.Registerer
 }
 
 // NewFactory produces a Factory that uses the supplied registry.
 func NewFactory(cfg Config, p fx.Printer, r prometheus.Registerer) *Factory {
 	return &Factory{
-		defaultNamespace: cfg.DefaultNamespace,
-		defaultSubsystem: cfg.DefaultSubsystem,
-		printer:          p,
-		registerer:       r,
+		defaults: prometheus.Opts{
+			Namespace: cfg.DefaultNamespace,
+			Subsystem: cfg.DefaultSubsystem,
+		},
+		printer:    p,
+		registerer: r,
 	}
 }
 
@@ -52,22 +53,6 @@ func (f *Factory) checkName(v string) error {
 	}
 
 	return nil
-}
-
-func (f *Factory) namespace(v string) string {
-	if len(v) > 0 {
-		return v
-	}
-
-	return f.defaultNamespace
-}
-
-func (f *Factory) subsystem(v string) string {
-	if len(v) > 0 {
-		return v
-	}
-
-	return f.defaultSubsystem
 }
 
 func (f *Factory) printf(format string, args ...interface{}) {
@@ -86,14 +71,14 @@ func (f *Factory) warnOnNoHelp(name, help string) {
 // when no Namespace is specified in the *Opts struct.  This may be
 // empty to indicate that there is no default.
 func (f *Factory) DefaultNamespace() string {
-	return f.defaultNamespace
+	return f.defaults.Namespace
 }
 
 // DefaultSubsystem returns the subsystem used to register metrics
 // when no Subsystem is specified in the *Opts struct.  This may be
 // empty to indicate that there is no default.
 func (f *Factory) DefaultSubsystem() string {
-	return f.defaultSubsystem
+	return f.defaults.Subsystem
 }
 
 // New creates a dynamically typed metric based on the concrete type passed as options.
@@ -175,8 +160,7 @@ func (f *Factory) NewVec(o interface{}, labelNames ...string) (m prometheus.Coll
 func (f *Factory) NewCounter(o prometheus.CounterOpts) (m prometheus.Counter, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		m = prometheus.NewCounter(o)
@@ -195,8 +179,7 @@ func (f *Factory) NewCounter(o prometheus.CounterOpts) (m prometheus.Counter, er
 func (f *Factory) NewCounterFunc(o prometheus.CounterOpts, fn func() float64) (m prometheus.CounterFunc, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		m = prometheus.NewCounterFunc(o, fn)
@@ -215,8 +198,7 @@ func (f *Factory) NewCounterFunc(o prometheus.CounterOpts, fn func() float64) (m
 func (f *Factory) NewCounterVec(o prometheus.CounterOpts, labelNames ...string) (m *prometheus.CounterVec, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		m = prometheus.NewCounterVec(o, labelNames)
@@ -235,8 +217,7 @@ func (f *Factory) NewCounterVec(o prometheus.CounterOpts, labelNames ...string) 
 func (f *Factory) NewGauge(o prometheus.GaugeOpts) (m prometheus.Gauge, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		m = prometheus.NewGauge(o)
@@ -255,8 +236,7 @@ func (f *Factory) NewGauge(o prometheus.GaugeOpts) (m prometheus.Gauge, err erro
 func (f *Factory) NewGaugeFunc(o prometheus.GaugeOpts, fn func() float64) (m prometheus.GaugeFunc, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		m = prometheus.NewGaugeFunc(o, fn)
@@ -275,8 +255,7 @@ func (f *Factory) NewGaugeFunc(o prometheus.GaugeOpts, fn func() float64) (m pro
 func (f *Factory) NewGaugeVec(o prometheus.GaugeOpts, labelNames ...string) (m *prometheus.GaugeVec, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		m = prometheus.NewGaugeVec(o, labelNames)
@@ -295,8 +274,7 @@ func (f *Factory) NewGaugeVec(o prometheus.GaugeOpts, labelNames ...string) (m *
 func (f *Factory) NewUntypedFunc(o prometheus.UntypedOpts, fn func() float64) (m prometheus.UntypedFunc, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		m = prometheus.NewUntypedFunc(o, fn)
@@ -316,8 +294,7 @@ func (f *Factory) NewUntypedFunc(o prometheus.UntypedOpts, fn func() float64) (m
 func (f *Factory) NewHistogram(o prometheus.HistogramOpts) (m prometheus.Observer, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		h := prometheus.NewHistogram(o)
@@ -338,8 +315,7 @@ func (f *Factory) NewHistogram(o prometheus.HistogramOpts) (m prometheus.Observe
 func (f *Factory) NewHistogramVec(o prometheus.HistogramOpts, labelNames ...string) (m prometheus.ObserverVec, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		h := prometheus.NewHistogramVec(o, labelNames)
@@ -360,8 +336,7 @@ func (f *Factory) NewHistogramVec(o prometheus.HistogramOpts, labelNames ...stri
 func (f *Factory) NewSummary(o prometheus.SummaryOpts) (m prometheus.Observer, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		s := prometheus.NewSummary(o)
@@ -382,8 +357,7 @@ func (f *Factory) NewSummary(o prometheus.SummaryOpts) (m prometheus.Observer, e
 func (f *Factory) NewSummaryVec(o prometheus.SummaryOpts, labelNames ...string) (m prometheus.ObserverVec, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
-		o.Namespace = f.namespace(o.Namespace)
-		o.Subsystem = f.subsystem(o.Subsystem)
+		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
 
 		s := prometheus.NewSummaryVec(o, labelNames)
