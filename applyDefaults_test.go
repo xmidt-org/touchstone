@@ -19,12 +19,19 @@ func (suite *ApplyDefaultsTestSuite) TestSrc() {
 		}
 
 		suite.T().Log("a nil src interface should be a noop")
-		ApplyDefaults(&actual, nil)
+		result := ApplyDefaults(&actual, nil)
 		suite.Equal(
 			prometheus.CounterOpts{
 				Name: "this should be unchanged",
 			},
 			actual,
+		)
+
+		suite.Equal(
+			&prometheus.CounterOpts{
+				Name: "this should be unchanged",
+			},
+			result,
 		)
 	})
 
@@ -34,12 +41,19 @@ func (suite *ApplyDefaultsTestSuite) TestSrc() {
 		}
 
 		suite.T().Log("a nil src pointer to a struct should be a noop")
-		ApplyDefaults(&actual, (*prometheus.CounterOpts)(nil))
+		result := ApplyDefaults(&actual, (*prometheus.CounterOpts)(nil))
 		suite.Equal(
 			prometheus.CounterOpts{
 				Name: "this should be unchanged",
 			},
 			actual,
+		)
+
+		suite.Equal(
+			&prometheus.CounterOpts{
+				Name: "this should be unchanged",
+			},
+			result,
 		)
 	})
 
@@ -51,6 +65,24 @@ func (suite *ApplyDefaultsTestSuite) TestSrc() {
 		suite.T().Log("a src pointer to anything other than a struct should panic")
 		suite.Panics(func() {
 			ApplyDefaults(&actual, (*int)(nil))
+		})
+
+		suite.Equal(
+			prometheus.CounterOpts{
+				Name: "this should be unchanged",
+			},
+			actual,
+		)
+	})
+
+	suite.Run("WrongType", func() {
+		actual := prometheus.CounterOpts{
+			Name: "this should be unchanged",
+		}
+
+		suite.T().Log("a non-struct src should panic")
+		suite.Panics(func() {
+			ApplyDefaults(&actual, 123)
 		})
 
 		suite.Equal(
@@ -72,11 +104,20 @@ func (suite *ApplyDefaultsTestSuite) TestDst() {
 	})
 
 	suite.Run("NilPointerToStruct", func() {
-		suite.T().Log("a nil dst pointer to struct should panic")
-		var defaults prometheus.CounterOpts
-		suite.Panics(func() {
-			ApplyDefaults((*prometheus.CounterOpts)(nil), defaults)
-		})
+		suite.T().Log("a nil dst pointer should result in a new struct")
+		defaults := prometheus.CounterOpts{
+			Name: "default",
+			Help: "default",
+		}
+
+		result := ApplyDefaults((*prometheus.CounterOpts)(nil), defaults)
+		suite.Equal(
+			&prometheus.CounterOpts{
+				Name: "default",
+				Help: "default",
+			},
+			result,
+		)
 	})
 
 	suite.Run("WrongTypeOfPointer", func() {
@@ -128,6 +169,22 @@ func (suite *ApplyDefaultsTestSuite) TestApply() {
 				Namespace: "default",
 				Name:      "test_counter",
 				Help:      "default",
+			},
+		},
+		{
+			dst: prometheus.CounterOpts{
+				Name: "test_counter",
+				Help: "pass_by_value",
+			},
+			// struct (i.e. not a pointer)
+			src: prometheus.Opts{
+				Namespace: "default",
+				Help:      "default",
+			},
+			expected: &prometheus.CounterOpts{
+				Namespace: "default",
+				Name:      "test_counter",
+				Help:      "pass_by_value",
 			},
 		},
 		{
@@ -185,8 +242,8 @@ func (suite *ApplyDefaultsTestSuite) TestApply() {
 
 	for i, testCase := range testCases {
 		suite.Run(strconv.Itoa(i), func() {
-			ApplyDefaults(testCase.dst, testCase.src)
-			suite.Equal(testCase.expected, testCase.dst)
+			result := ApplyDefaults(testCase.dst, testCase.src)
+			suite.Equal(testCase.expected, result)
 		})
 	}
 }
