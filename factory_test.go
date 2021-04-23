@@ -78,65 +78,93 @@ func (suite *FactoryTestSuite) TestNew() {
 		})
 	})
 
-	suite.Run("Counter", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
+	testCases := []struct {
+		metricName string
+		opts       interface{}
+		implements interface{}
+	}{
+		{
+			metricName: "test",
+			opts: prometheus.CounterOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Counter)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.CounterOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Counter)(nil),
+		},
+		{
+			metricName: "test",
+			opts: prometheus.GaugeOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Gauge)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.GaugeOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Gauge)(nil),
+		},
+		{
+			metricName: "test",
+			opts: prometheus.HistogramOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Histogram)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.HistogramOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Histogram)(nil),
+		},
+		{
+			metricName: "test",
+			opts: prometheus.SummaryOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Summary)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.SummaryOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Summary)(nil),
+		},
+	}
+
+	for i, testCase := range testCases {
+		suite.Run(strconv.Itoa(i), func() {
+			f, g, _ := suite.newFactory(Config{
+				DefaultNamespace: "n",
+				DefaultSubsystem: "s",
+			})
+
+			m, err := f.New(testCase.opts)
+			suite.NoError(err)
+			suite.NotNil(m)
+			suite.Implements(testCase.implements, m)
+
+			ma := suite.newAssertions(g)
+			ma.Registered(prometheus.BuildFQName("n", "s", testCase.metricName))
 		})
-
-		m, err := f.New(prometheus.CounterOpts{Name: "test", Help: "test"})
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.Implements((*prometheus.Counter)(nil), m)
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
-
-	suite.Run("Gauge", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
-		})
-
-		m, err := f.New(prometheus.GaugeOpts{Name: "test", Help: "test"})
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.Implements((*prometheus.Gauge)(nil), m)
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
-
-	suite.Run("Histogram", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
-		})
-
-		m, err := f.New(prometheus.HistogramOpts{Name: "test", Help: "test"})
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.Implements((*prometheus.Histogram)(nil), m)
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
-
-	suite.Run("Summary", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
-		})
-
-		m, err := f.New(prometheus.SummaryOpts{Name: "test", Help: "test"})
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.Implements((*prometheus.Summary)(nil), m)
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
+	}
 }
 
 func (suite *FactoryTestSuite) TestNewVec() {
@@ -147,69 +175,94 @@ func (suite *FactoryTestSuite) TestNewVec() {
 		})
 	})
 
-	suite.Run("CounterVec", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
+	testCases := []struct {
+		metricName string
+		opts       interface{}
+		isType     interface{}
+	}{
+		{
+			metricName: "test",
+			opts: prometheus.CounterOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.CounterVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.CounterOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.CounterVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: prometheus.GaugeOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.GaugeVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.GaugeOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.GaugeVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: prometheus.HistogramOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.HistogramVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.HistogramOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.HistogramVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: prometheus.SummaryOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.SummaryVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.SummaryOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.SummaryVec)(nil),
+		},
+	}
+
+	for i, testCase := range testCases {
+		suite.Run(strconv.Itoa(i), func() {
+			f, g, _ := suite.newFactory(Config{
+				DefaultNamespace: "n",
+				DefaultSubsystem: "s",
+			})
+
+			m, err := f.NewVec(testCase.opts, "label1", "label2")
+			suite.NoError(err)
+			suite.NotNil(m)
+			suite.IsType(testCase.isType, m)
+			suite.labelsPresent(m, "label1", "label2")
+
+			ma := suite.newAssertions(g)
+			ma.Registered(prometheus.BuildFQName("n", "s", testCase.metricName))
 		})
-
-		m, err := f.NewVec(prometheus.CounterOpts{Name: "test", Help: "test"}, "label1", "label2")
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.IsType((*prometheus.CounterVec)(nil), m)
-		suite.labelsPresent(m, "label1", "label2")
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
-
-	suite.Run("GaugeVec", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
-		})
-
-		m, err := f.NewVec(prometheus.GaugeOpts{Name: "test", Help: "test"}, "label1", "label2")
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.IsType((*prometheus.GaugeVec)(nil), m)
-		suite.labelsPresent(m, "label1", "label2")
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
-
-	suite.Run("HistogramVec", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
-		})
-
-		m, err := f.NewVec(prometheus.HistogramOpts{Name: "test", Help: "test"}, "label1", "label2")
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.IsType((*prometheus.HistogramVec)(nil), m)
-		suite.labelsPresent(m, "label1", "label2")
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
-
-	suite.Run("SummaryVec", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
-		})
-
-		m, err := f.NewVec(prometheus.SummaryOpts{Name: "test", Help: "test"}, "label1", "label2")
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.IsType((*prometheus.SummaryVec)(nil), m)
-		suite.labelsPresent(m, "label1", "label2")
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
+	}
 }
 
 func (suite *FactoryTestSuite) TestNewCounter() {
@@ -816,35 +869,61 @@ func (suite *FactoryTestSuite) TestNewObserver() {
 		})
 	})
 
-	suite.Run("Histogram", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
+	testCases := []struct {
+		metricName string
+		opts       interface{}
+		implements interface{}
+	}{
+		{
+			metricName: "test",
+			opts: prometheus.HistogramOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Histogram)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.HistogramOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Histogram)(nil),
+		},
+		{
+			metricName: "test",
+			opts: prometheus.SummaryOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Summary)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.SummaryOpts{
+				Name: "test",
+				Help: "test",
+			},
+			implements: (*prometheus.Summary)(nil),
+		},
+	}
+
+	for i, testCase := range testCases {
+		suite.Run(strconv.Itoa(i), func() {
+			f, g, _ := suite.newFactory(Config{
+				DefaultNamespace: "n",
+				DefaultSubsystem: "s",
+			})
+
+			m, err := f.NewObserver(testCase.opts)
+			suite.NoError(err)
+			suite.NotNil(m)
+			suite.Implements(testCase.implements, m)
+
+			ma := suite.newAssertions(g)
+			ma.Registered(prometheus.BuildFQName("n", "s", testCase.metricName))
 		})
-
-		m, err := f.NewObserver(prometheus.HistogramOpts{Name: "test", Help: "test"})
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.Implements((*prometheus.Histogram)(nil), m)
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
-
-	suite.Run("Summary", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
-		})
-
-		m, err := f.NewObserver(prometheus.SummaryOpts{Name: "test", Help: "test"})
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.Implements((*prometheus.Summary)(nil), m)
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
+	}
 }
 
 func (suite *FactoryTestSuite) TestNewObserverVec() {
@@ -855,37 +934,62 @@ func (suite *FactoryTestSuite) TestNewObserverVec() {
 		})
 	})
 
-	suite.Run("HistogramVec", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
+	testCases := []struct {
+		metricName string
+		opts       interface{}
+		isType     interface{}
+	}{
+		{
+			metricName: "test",
+			opts: prometheus.HistogramOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.HistogramVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.HistogramOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.HistogramVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: prometheus.SummaryOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.SummaryVec)(nil),
+		},
+		{
+			metricName: "test",
+			opts: &prometheus.SummaryOpts{
+				Name: "test",
+				Help: "test",
+			},
+			isType: (*prometheus.SummaryVec)(nil),
+		},
+	}
+
+	for i, testCase := range testCases {
+		suite.Run(strconv.Itoa(i), func() {
+			f, g, _ := suite.newFactory(Config{
+				DefaultNamespace: "n",
+				DefaultSubsystem: "s",
+			})
+
+			m, err := f.NewObserverVec(testCase.opts, "label1", "label2")
+			suite.NoError(err)
+			suite.NotNil(m)
+			suite.IsType(testCase.isType, m)
+			suite.labelsPresent(m, "label1", "label2")
+
+			ma := suite.newAssertions(g)
+			ma.Registered(prometheus.BuildFQName("n", "s", testCase.metricName))
 		})
-
-		m, err := f.NewObserverVec(prometheus.HistogramOpts{Name: "test", Help: "test"}, "label1", "label2")
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.IsType((*prometheus.HistogramVec)(nil), m)
-		suite.labelsPresent(m, "label1", "label2")
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
-
-	suite.Run("SummaryVec", func() {
-		f, g, _ := suite.newFactory(Config{
-			DefaultNamespace: "n",
-			DefaultSubsystem: "s",
-		})
-
-		m, err := f.NewObserverVec(prometheus.SummaryOpts{Name: "test", Help: "test"}, "label1", "label2")
-		suite.NoError(err)
-		suite.NotNil(m)
-		suite.IsType((*prometheus.SummaryVec)(nil), m)
-		suite.labelsPresent(m, "label1", "label2")
-
-		ma := suite.newAssertions(g)
-		ma.Registered(prometheus.BuildFQName("n", "s", "test"))
-	})
+	}
 }
 
 func TestFactory(t *testing.T) {

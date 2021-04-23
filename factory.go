@@ -88,16 +88,26 @@ func (f *Factory) DefaultSubsystem() string {
 // The o parameter must be one of the following, or this method panics:
 //
 //   - prometheus.CounterOpts
+//   - *prometheus.CounterOpts
 //   - prometheus.GaugeOpts
+//   - *prometheus.GaugeOpts
 //   - prometheus.HistogramOpts
+//   - *prometheus.HistogramOpts
 //   - prometheus.SummaryOpts
+//   - *prometheus.SummaryOpts
 func (f *Factory) New(o interface{}) (m prometheus.Collector, err error) {
 	switch opts := o.(type) {
 	case prometheus.CounterOpts:
 		m, err = f.NewCounter(opts)
 
+	case *prometheus.CounterOpts:
+		m, err = f.NewCounter(*opts)
+
 	case prometheus.GaugeOpts:
 		m, err = f.NewGauge(opts)
+
+	case *prometheus.GaugeOpts:
+		m, err = f.NewGauge(*opts)
 
 	case prometheus.HistogramOpts:
 		var obs prometheus.Observer
@@ -106,9 +116,23 @@ func (f *Factory) New(o interface{}) (m prometheus.Collector, err error) {
 			m = obs.(prometheus.Collector)
 		}
 
+	case *prometheus.HistogramOpts:
+		var obs prometheus.Observer
+		obs, err = f.NewHistogram(*opts)
+		if err == nil {
+			m = obs.(prometheus.Collector)
+		}
+
 	case prometheus.SummaryOpts:
 		var obs prometheus.Observer
 		obs, err = f.NewSummary(opts)
+		if err == nil {
+			m = obs.(prometheus.Collector)
+		}
+
+	case *prometheus.SummaryOpts:
+		var obs prometheus.Observer
+		obs, err = f.NewSummary(*opts)
 		if err == nil {
 			m = obs.(prometheus.Collector)
 		}
@@ -127,22 +151,38 @@ func (f *Factory) New(o interface{}) (m prometheus.Collector, err error) {
 // The o parameter must be one of the following, or this method panics:
 //
 //   - prometheus.CounterOpts
+//   - *prometheus.CounterOpts
 //   - prometheus.GaugeOpts
+//   - *prometheus.GaugeOpts
 //   - prometheus.HistogramOpts
+//   - *prometheus.HistogramOpts
 //   - prometheus.SummaryOpts
+//   - *prometheus.SummaryOpts
 func (f *Factory) NewVec(o interface{}, labelNames ...string) (m prometheus.Collector, err error) {
 	switch opts := o.(type) {
 	case prometheus.CounterOpts:
 		m, err = f.NewCounterVec(opts, labelNames...)
 
+	case *prometheus.CounterOpts:
+		m, err = f.NewCounterVec(*opts, labelNames...)
+
 	case prometheus.GaugeOpts:
 		m, err = f.NewGaugeVec(opts, labelNames...)
+
+	case *prometheus.GaugeOpts:
+		m, err = f.NewGaugeVec(*opts, labelNames...)
 
 	case prometheus.HistogramOpts:
 		m, err = f.NewHistogramVec(opts, labelNames...)
 
+	case *prometheus.HistogramOpts:
+		m, err = f.NewHistogramVec(*opts, labelNames...)
+
 	case prometheus.SummaryOpts:
 		m, err = f.NewSummaryVec(opts, labelNames...)
+
+	case *prometheus.SummaryOpts:
+		m, err = f.NewSummaryVec(*opts, labelNames...)
 
 	default:
 		panic(fmt.Errorf("%T is not a recognized prometheus xxxOpts struct", o))
@@ -376,29 +416,41 @@ func (f *Factory) NewObserver(o interface{}) (m prometheus.Observer, err error) 
 	case prometheus.HistogramOpts:
 		m, err = f.NewHistogram(opts)
 
+	case *prometheus.HistogramOpts:
+		m, err = f.NewHistogram(*opts)
+
 	case prometheus.SummaryOpts:
 		m, err = f.NewSummary(opts)
 
+	case *prometheus.SummaryOpts:
+		m, err = f.NewSummary(*opts)
+
 	default:
-		panic(fmt.Errorf("%T is not a prometheus.HistogramOpts or a prometheus.SummaryOpts", o))
+		panic(fmt.Errorf("%T is not a prometheus.HistogramOpts, a prometheus.SummaryOpts, or a pointer to either", o))
 	}
 
 	return
 }
 
 // NewObserverVec creates a histogram vector or a summary vector, depending on the concrete
-// type of the first parameter.  This method panics if o is not a prometheus.HistogramOpts
-// or a prometheus.SummaryOpts.
+// type of the first parameter.  This method panics if o is not a prometheus.HistogramOpts,
+// a prometheus.SummaryOpts, or a pointer to either.
 func (f *Factory) NewObserverVec(o interface{}, labelNames ...string) (m prometheus.ObserverVec, err error) {
 	switch opts := o.(type) {
 	case prometheus.HistogramOpts:
 		m, err = f.NewHistogramVec(opts, labelNames...)
 
+	case *prometheus.HistogramOpts:
+		m, err = f.NewHistogramVec(*opts, labelNames...)
+
 	case prometheus.SummaryOpts:
 		m, err = f.NewSummaryVec(opts, labelNames...)
 
+	case *prometheus.SummaryOpts:
+		m, err = f.NewSummaryVec(*opts, labelNames...)
+
 	default:
-		panic(fmt.Errorf("%T is not a prometheus.HistogramOpts or a prometheus.SummaryOpts", o))
+		panic(fmt.Errorf("%T is not a prometheus.HistogramOpts, a prometheus.SummaryOpts, or a pointer to either", o))
 	}
 
 	return
