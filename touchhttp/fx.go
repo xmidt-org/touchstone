@@ -6,7 +6,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/xmidt-org/touchstone"
 	"go.uber.org/fx"
 )
 
@@ -46,8 +45,6 @@ type In struct {
 //   - touchhttp.Handler
 //       This is the http.Handler to use to serve prometheus metrics.
 //       It will be instrumented if Config.InstrumentMetricHandler is set to true.
-//   - touchhttp.ClientBundle
-//   - touchhttp.ServerBundle
 func Provide() fx.Option {
 	return fx.Provide(
 		func(r prometheus.Registerer, in In) (promhttp.HandlerOpts, error) {
@@ -60,12 +57,6 @@ func Provide() fx.Option {
 			}
 
 			return
-		},
-		func(f *touchstone.Factory, in In) (ClientBundle, error) {
-			return NewClientBundle(f, in.Now)
-		},
-		func(f *touchstone.Factory, in In) (ServerBundle, error) {
-			return NewServerBundle(f, in.Now)
 		},
 	)
 }

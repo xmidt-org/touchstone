@@ -51,17 +51,30 @@ func copyDefaults(dst, src reflect.Value) {
 // exist in src, that field is skipped.
 //
 // This function always returns a non-nil pointer to the same type of struct
-// that dst refers to.  If dst is a struct value, this function creates a new
-// instance of that struct, applies the defaults to the new instance, and returns
-// a pointer to that new instance.  If dst is a non-nil pointer to struct, defaults
-// are applied in-place to that struct and dst is returned as is.  If dst is any
-// other type, including a nil pointer, this function panics.
+// that dst refers to:
 //
-// The src parameter may be the nil interface or a nil pointer to a struct, in
-// which case no defaults are applied to dst.  However, the rules for dst still
-// apply: if dst is a struct value a pointer to a new struct of that type is returned.
-// Otherwise, src must be a struct or a pointer to a struct.  Any other type for src
-// will result in a panic.
+//   - If dst is a struct value, a new instance of dst is created and defaults
+//     are applied to that instance.  The pointer to the new instance is returned.
+//
+//   - If dst is a non-nil pointer to a struct, defaults are applied to that instance.
+//     The dst pointer is returned.
+//
+//   - If dst is a nil pointer to a struct, a new instance of the struct is created
+//     and defaults are applied to that instance.  The pointer to the new instance
+//     is returned.
+//
+//   - If dst is any other type, this function panics.
+//
+// The src parameter represents the defaults to apply to dst:
+//
+//   - If src is nil or a nil pointer, this function does not apply any defaults
+//     but still executes the logic for dst.  In particular, a new zero-value dst
+//     struct will be returned if dst is a nil pointer to struct or a struct value.
+//
+//   - If src is a struct value or a non-nil pointer to struct, defaults are taken
+//     from src and applied to dst.
+//
+//   - If src is any other type, this function panics.
 //
 // The primary use case for this function is setting up default options for
 // prometheus metrics:
@@ -92,6 +105,11 @@ func copyDefaults(dst, src reflect.Value) {
 //
 //   // creates a new opts which is a clone of dst
 //   go := ApplyDefaults(prometheus.GaugeOpts{Name: "cloneme"}, defaults).(*prometheus.GaugeOpts)
+//
+//   // can chain with the dynamic factory methods
+//   var f *Factory = /* ... */
+//   var co prometheus.CounterOpts
+//   f.New(ApplyDefaults(co, defaults)) // uses a distinct instance of prometheus.CounterOpts
 //
 // Note that this function does a shallow copy of any relevant fields.  In particular,
 // that means that a slice of buckets will point to the same data in the dst and src
