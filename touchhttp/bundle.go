@@ -182,9 +182,6 @@ type ServerBundle struct {
 // ForServer produces a ServerInstrumenter using this bundle of metric options.  The internal
 // server defaults are applied to each option for fields that are unset, e.g. metric names.
 //
-// This method does not modify this bundle.  However, if ForClient is called using this same
-// bundle, then clients and servers may share the same metrics depending on what's been defaulted.
-//
 // This method may be called multiple times with different prometheus.Labels.  In that case
 // each call must supply the same label names, or the underlying prometheus library will
 // return an error.
@@ -203,20 +200,21 @@ func (sb ServerBundle) ForServer(f *touchstone.Factory, l prometheus.Labels) (si
 	var metricErr error
 
 	touchstone.ApplyDefaults(&sb.Count, defaultServerCount)
-	si.counter, metricErr = newCounterVec(f, sb.Count, full, l)
-	err = multierr.Append(err, metricErr)
+	si.count, metricErr = newCounterVec(f, sb.Count, full, l)
+	multierr.AppendInto(&err, metricErr)
 
+	// InFlight is slightly different, as it doesn't have code or method labels
 	touchstone.ApplyDefaults(&sb.InFlight, defaultServerInFlight)
 	si.inFlight, metricErr = newGauge(f, sb.InFlight, extra, l)
-	err = multierr.Append(err, metricErr)
+	multierr.AppendInto(&err, metricErr)
 
-	// TODO: apply defaults
+	touchstone.ApplyDefaults(&sb.RequestSize, defaultServerRequestSize)
 	si.requestSize, metricErr = newObserverVec(f, sb.RequestSize, full, l)
-	err = multierr.Append(err, metricErr)
+	multierr.AppendInto(&err, metricErr)
 
-	// TODO: apply defaults
+	touchstone.ApplyDefaults(&sb.Duration, defaultServerDuration)
 	si.duration, metricErr = newObserverVec(f, sb.Duration, full, l)
-	err = multierr.Append(err, metricErr)
+	multierr.AppendInto(&err, metricErr)
 
 	return
 }
@@ -243,4 +241,48 @@ type ClientBundle struct {
 	// Now is the strategy for extracting the current system time.  If unset,
 	// time.Now is used.
 	Now func() time.Time
+}
+
+// ForClient produces a ClientInstrumenter using this bundle of metric options.  The internal
+// server defaults are applied to each option for fields that are unset, e.g. metric names.
+//
+// This method may be called multiple times with different prometheus.Labels.  In that case
+// each call must supply the same label names, or the underlying prometheus library will
+// return an error.
+func (cb ClientBundle) ForClient(f *touchstone.Factory, l prometheus.Labels) (ci ClientInstrumenter, err error) {
+	var extra, full []string
+	extra, full, err = labelNames(l)
+	if err != nil {
+		return
+	}
+
+	ci.now = cb.Now
+	if ci.now == nil {
+		ci.now = time.Now
+	}
+
+	var metricErr error
+
+	touchstone.ApplyDefaults(&cb.Count, defaultClientCount)
+	ci.count, metricErr = newCounterVec(f, cb.Count, full, l)
+	multierr.AppendInto(&err, metricErr)
+
+	// InFlight is slightly different, as it doesn't have code or method labels
+	touchstone.ApplyDefaults(&cb.InFlight, defaultClientInFlight)
+	ci.inFlight, metricErr = newGauge(f, cb.InFlight, extra, l)
+	multierr.AppendInto(&err, metricErr)
+
+	touchstone.ApplyDefaults(&cb.RequestSize, defaultClientRequestSize)
+	ci.requestSize, metricErr = newObserverVec(f, cb.RequestSize, full, l)
+	multierr.AppendInto(&err, metricErr)
+
+	touchstone.ApplyDefaults(&cb.Duration, defaultClientDuration)
+	ci.duration, metricErr = newObserverVec(f, cb.Duration, full, l)
+	multierr.AppendInto(&err, metricErr)
+
+	touchstone.ApplyDefaults(&cb.ErrorCount, defaultClientErrorCount)
+	ci.errorCount, metricErr = newCounterVec(f, cb.ErrorCount, full, l)
+	multierr.AppendInto(&err, metricErr)
+
+	return
 }

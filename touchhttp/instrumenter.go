@@ -22,7 +22,7 @@ type transaction struct {
 // instrumenter is the common logic that decorates HTTP transactions for
 // both clients and servers.
 type instrumenter struct {
-	counter     *prometheus.CounterVec
+	count       *prometheus.CounterVec
 	inFlight    prometheus.Gauge
 	requestSize prometheus.ObserverVec
 	duration    prometheus.ObserverVec
@@ -65,7 +65,7 @@ func (i instrumenter) end(t transaction) {
 
 	l := prometheus.Labels(NewLabels(t.code, t.method))
 
-	i.counter.With(l).Inc()
+	i.count.With(l).Inc()
 	elapsed := i.now().Sub(t.start)
 	i.duration.With(l).Observe(
 		float64(elapsed / time.Millisecond),
