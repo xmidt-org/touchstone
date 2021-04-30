@@ -39,23 +39,18 @@ func (suite *ProvideTestSuite) TestDefaults() {
 	var (
 		ho promhttp.HandlerOpts
 		h  Handler
-		sb ServerBundle
-		cb ClientBundle
 		r  prometheus.Registerer
 
 		app = fxtest.New(
 			suite.T(),
 			touchstone.Provide(),
 			Provide(),
-			fx.Populate(&ho, &h, &sb, &cb, &r),
+			fx.Populate(&ho, &h, &r),
 		)
 	)
 
 	suite.NoError(app.Err())
 	app.RequireStart()
-
-	suite.assertMetricExists(r, MetricServerRequestCount, "ServerBundle not initialized properly")
-	suite.assertMetricExists(r, MetricClientRequestCount, "ClientBundle not initialized properly")
 
 	suite.assertMetricNotExists(
 		r,
@@ -70,8 +65,6 @@ func (suite *ProvideTestSuite) TestInstrumentMetricHandler() {
 	var (
 		ho promhttp.HandlerOpts
 		h  Handler
-		sb ServerBundle
-		cb ClientBundle
 		r  prometheus.Registerer
 
 		app = fxtest.New(
@@ -83,15 +76,12 @@ func (suite *ProvideTestSuite) TestInstrumentMetricHandler() {
 			),
 			touchstone.Provide(),
 			Provide(),
-			fx.Populate(&ho, &h, &sb, &cb, &r),
+			fx.Populate(&ho, &h, &r),
 		)
 	)
 
 	suite.NoError(app.Err())
 	app.RequireStart()
-
-	suite.assertMetricExists(r, MetricServerRequestCount, "ServerBundle not initialized properly")
-	suite.assertMetricExists(r, MetricClientRequestCount, "ClientBundle not initialized properly")
 
 	suite.assertMetricExists(
 		r,
