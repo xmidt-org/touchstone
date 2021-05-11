@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+- Broken README badge links. [#12](https://github.com/xmidt-org/touchstone/pull/12)
+
 ## [v0.0.3]
 
 ### Added
