@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 - Updated go.uber.org/fx to 1.17.1
 - Updated github.com/prometheus/client_golang to 1.12.1
+- Remove use of fx.Printer for messages.  Replaced with an optional zap.Logger.
 
 ### Fixed
 - Broken README badge links. [#12](https://github.com/xmidt-org/touchstone/pull/12)
