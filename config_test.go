@@ -3,7 +3,7 @@ package touchstone
 import (
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -19,13 +19,13 @@ func (suite *NewTestSuite) TestDefault() {
 
 	suite.Error(
 		// the go collector should have been registered
-		r.Register(prometheus.NewGoCollector()),
+		r.Register(collectors.NewGoCollector()),
 	)
 
 	suite.Error(
 		// the process collector should have been registered
-		r.Register(prometheus.NewProcessCollector(
-			prometheus.ProcessCollectorOpts{},
+		r.Register(collectors.NewProcessCollector(
+			collectors.ProcessCollectorOpts{},
 		)),
 	)
 }
@@ -38,13 +38,13 @@ func (suite *NewTestSuite) TestPedantic() {
 
 	suite.Error(
 		// the go collector should have been registered
-		r.Register(prometheus.NewGoCollector()),
+		r.Register(collectors.NewGoCollector()),
 	)
 
 	suite.Error(
 		// the process collector should have been registered
-		r.Register(prometheus.NewProcessCollector(
-			prometheus.ProcessCollectorOpts{},
+		r.Register(collectors.NewProcessCollector(
+			collectors.ProcessCollectorOpts{},
 		)),
 	)
 }
@@ -61,12 +61,12 @@ func (suite *NewTestSuite) TestDisableStandardCollectors() {
 	suite.NotNil(r)
 
 	suite.NoError(
-		r.Register(prometheus.NewGoCollector()),
+		r.Register(collectors.NewGoCollector()),
 	)
 
 	suite.NoError(
-		r.Register(prometheus.NewProcessCollector(
-			prometheus.ProcessCollectorOpts{},
+		r.Register(collectors.NewProcessCollector(
+			collectors.ProcessCollectorOpts{},
 		)),
 	)
 }

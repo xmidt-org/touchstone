@@ -2,6 +2,7 @@ package touchstone
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
 // Config defines the configuration options for bootstrapping a prometheus-based metrics environment.
@@ -20,19 +21,19 @@ type Config struct {
 	// DisableGoCollector controls whether the go collector is registered on startup.
 	// By default, the go collector is registered.
 	//
-	// See: https://godoc.org/github.com/prometheus/client_golang/prometheus#NewGoCollector
+	// See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus/collectors#NewGoCollector
 	DisableGoCollector bool `json:"disableGoCollector" yaml:"disableGoCollector"`
 
 	// DisableProcessCollector controls whether the process collector is registered on startup.
 	// By default, this collector is registered.
 	//
-	// See: https://godoc.org/github.com/prometheus/client_golang/prometheus#NewProcessCollector
+	// See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus/collectors#NewProcessCollector
 	DisableProcessCollector bool `json:"disableProcessCollector" yaml:"disableProcessCollector"`
 
 	// DisableBuildInfoCollector controls whether the build info collector is registered on startup.
 	// By default, this collector is registered.
 	//
-	// See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#NewBuildInfoCollector
+	// See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus/collectors#NewBuildInfoCollector
 	DisableBuildInfoCollector bool `json:"disableBuildInfoCollector" yaml:"disableBuildInfoCollector"`
 }
 
@@ -47,13 +48,13 @@ func New(cfg Config) (g prometheus.Gatherer, r prometheus.Registerer, err error)
 	}
 
 	if !cfg.DisableGoCollector {
-		err = pr.Register(prometheus.NewGoCollector())
+		err = pr.Register(collectors.NewGoCollector())
 	}
 
 	if err == nil && !cfg.DisableProcessCollector {
 		err = pr.Register(
-			prometheus.NewProcessCollector(
-				prometheus.ProcessCollectorOpts{
+			collectors.NewProcessCollector(
+				collectors.ProcessCollectorOpts{
 					Namespace: cfg.DefaultNamespace,
 				},
 			),
@@ -61,7 +62,7 @@ func New(cfg Config) (g prometheus.Gatherer, r prometheus.Registerer, err error)
 	}
 
 	if err == nil && !cfg.DisableBuildInfoCollector {
-		err = pr.Register(prometheus.NewBuildInfoCollector())
+		err = pr.Register(collectors.NewBuildInfoCollector())
 	}
 
 	if err == nil {

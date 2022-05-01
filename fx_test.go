@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/fx"
 )
@@ -37,12 +38,12 @@ func (suite *ProvideTestSuite) TestDefaults() {
 	suite.Empty(factory.DefaultSubsystem())
 
 	suite.Error(
-		registerer.Register(prometheus.NewGoCollector()),
+		registerer.Register(collectors.NewGoCollector()),
 	)
 
 	suite.Error(
-		registerer.Register(prometheus.NewProcessCollector(
-			prometheus.ProcessCollectorOpts{},
+		registerer.Register(collectors.NewProcessCollector(
+			collectors.ProcessCollectorOpts{},
 		)),
 	)
 
@@ -83,12 +84,12 @@ func (suite *ProvideTestSuite) TestCustom() {
 	suite.Equal("s", factory.DefaultSubsystem())
 
 	suite.NoError(
-		registerer.Register(prometheus.NewGoCollector()),
+		registerer.Register(collectors.NewGoCollector()),
 	)
 
 	suite.NoError(
-		registerer.Register(prometheus.NewProcessCollector(
-			prometheus.ProcessCollectorOpts{},
+		registerer.Register(collectors.NewProcessCollector(
+			collectors.ProcessCollectorOpts{},
 		)),
 	)
 
