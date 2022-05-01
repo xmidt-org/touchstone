@@ -6,6 +6,12 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// Module is the name of the fx module that touchstone components
+	// are provided within.
+	Module = "touchstone"
+)
+
 // In represents the components used by this package to bootstrap
 // a prometheus environment.  Provide uses these components.
 type In struct {
@@ -29,13 +35,16 @@ type In struct {
 //       It may be decorated to arbitrary depth.
 //   - *touchstone.Factory
 func Provide() fx.Option {
-	return fx.Provide(
-		func(in In) (prometheus.Gatherer, prometheus.Registerer, error) {
-			return New(in.Config)
-		},
-		func(r prometheus.Registerer, in In) *Factory {
-			return NewFactory(in.Config, in.Logger, r)
-		},
+	return fx.Module(
+		Module,
+		fx.Provide(
+			func(in In) (prometheus.Gatherer, prometheus.Registerer, error) {
+				return New(in.Config)
+			},
+			func(r prometheus.Registerer, in In) *Factory {
+				return NewFactory(in.Config, in.Logger, r)
+			},
+		),
 	)
 }
 
