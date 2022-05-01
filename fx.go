@@ -3,6 +3,7 @@ package touchstone
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 // In represents the components used by this package to bootstrap
@@ -14,9 +15,9 @@ type In struct {
 	// as a zero value for Config will result in a default environment.
 	Config Config `optional:"true"`
 
-	// Printer is the fx.Printer to which this package writes messages.
+	// Logger is the *zap.Logger to which this package writes messages.
 	// This is optional, and if unset no messages are written.
-	Printer fx.Printer `optional:"true"`
+	Logger *zap.Logger `optional:"true"`
 }
 
 // Provide bootstraps a prometheus environment for an uber/fx App.
@@ -33,7 +34,7 @@ func Provide() fx.Option {
 			return New(in.Config)
 		},
 		func(r prometheus.Registerer, in In) *Factory {
-			return NewFactory(in.Config, in.Printer, r)
+			return NewFactory(in.Config, in.Logger, r)
 		},
 	)
 }

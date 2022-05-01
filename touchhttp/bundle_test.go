@@ -8,6 +8,8 @@ import (
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/suite"
 	"github.com/xmidt-org/touchstone"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -31,15 +33,17 @@ func (suite *BundleTestSuite) SetupTest() {
 	suite.now = time.Now()
 }
 
-func (suite *BundleTestSuite) Printf(format string, args ...interface{}) {
-	suite.T().Logf(format, args...)
+func (suite *BundleTestSuite) newTestLogger() *zap.Logger {
+	return zap.New(
+		zapcore.NewNopCore(),
+	)
 }
 
 // newRegistry constructs a registry and its wrapping factory with a prebuilt
 // environment for testing.
 func (suite *BundleTestSuite) newRegistry() (*prometheus.Registry, *touchstone.Factory) {
 	r := prometheus.NewPedanticRegistry()
-	f := touchstone.NewFactory(touchstone.Config{}, suite, r)
+	f := touchstone.NewFactory(touchstone.Config{}, suite.newTestLogger(), r)
 	return r, f
 }
 

@@ -10,12 +10,7 @@ import (
 )
 
 type FactoryTestSuite struct {
-	suite.Suite
-}
-
-// Printf allows this suite to be used directly as an fx.Printer.
-func (suite *FactoryTestSuite) Printf(format string, arguments ...interface{}) {
-	suite.T().Logf(format, arguments...)
+	FxTestSuite
 }
 
 func (suite *FactoryTestSuite) newFactory(cfg Config) (*Factory, prometheus.Gatherer, prometheus.Registerer) {
@@ -23,7 +18,7 @@ func (suite *FactoryTestSuite) newFactory(cfg Config) (*Factory, prometheus.Gath
 	suite.Require().NoError(err)
 	suite.Require().NotNil(r)
 
-	f := NewFactory(cfg, suite, r)
+	f := NewFactory(cfg, suite.logger, r)
 	suite.Require().NotNil(f)
 	suite.Equal(cfg.DefaultNamespace, f.DefaultNamespace())
 	suite.Equal(cfg.DefaultSubsystem, f.DefaultSubsystem())
