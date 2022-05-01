@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 var (
@@ -31,18 +31,18 @@ var (
 // See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus/promauto
 type Factory struct {
 	defaults   prometheus.Opts
-	printer    fx.Printer
+	logger     *zap.Logger
 	registerer prometheus.Registerer
 }
 
 // NewFactory produces a Factory that uses the supplied registry.
-func NewFactory(cfg Config, p fx.Printer, r prometheus.Registerer) *Factory {
+func NewFactory(cfg Config, l *zap.Logger, r prometheus.Registerer) *Factory {
 	return &Factory{
 		defaults: prometheus.Opts{
 			Namespace: cfg.DefaultNamespace,
 			Subsystem: cfg.DefaultSubsystem,
 		},
-		printer:    p,
+		logger:     l,
 		registerer: r,
 	}
 }
@@ -55,15 +55,9 @@ func (f *Factory) checkName(v string) error {
 	return nil
 }
 
-func (f *Factory) printf(format string, args ...interface{}) {
-	if f.printer != nil {
-		f.printer.Printf("[TOUCHSTONE] "+format, args...)
-	}
-}
-
 func (f *Factory) warnOnNoHelp(name, help string) {
-	if len(help) == 0 {
-		f.printf("WARNING: No Help set for metric: %s", name)
+	if len(help) == 0 && f.logger != nil {
+		f.logger.Warn("No help set for metric", zap.String("name", name))
 	}
 }
 

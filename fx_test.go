@@ -6,11 +6,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/fx"
-	"go.uber.org/fx/fxtest"
 )
 
 type ProvideTestSuite struct {
-	suite.Suite
+	FxTestSuite
 }
 
 func (suite *ProvideTestSuite) TestDefaults() {
@@ -20,8 +19,7 @@ func (suite *ProvideTestSuite) TestDefaults() {
 		factory    *Factory
 	)
 
-	app := fxtest.New(
-		suite.T(),
+	app := suite.newTestApp(
 		Provide(),
 		fx.Populate(
 			&gatherer,
@@ -30,7 +28,6 @@ func (suite *ProvideTestSuite) TestDefaults() {
 		),
 	)
 
-	suite.NoError(app.Err())
 	app.RequireStart()
 
 	suite.NotNil(gatherer)
@@ -59,8 +56,7 @@ func (suite *ProvideTestSuite) TestCustom() {
 		factory    *Factory
 	)
 
-	app := fxtest.New(
-		suite.T(),
+	app := suite.newTestApp(
 		fx.Supply(
 			Config{
 				DefaultNamespace:        "n",
@@ -78,7 +74,6 @@ func (suite *ProvideTestSuite) TestCustom() {
 		),
 	)
 
-	suite.NoError(app.Err())
 	app.RequireStart()
 
 	suite.NotNil(gatherer)
@@ -105,18 +100,12 @@ func TestProvide(t *testing.T) {
 }
 
 type MetricTestSuite struct {
-	suite.Suite
-}
-
-// Printf lets this suite be used directly as an fx.Printer
-func (suite *MetricTestSuite) Printf(format string, args ...interface{}) {
-	suite.T().Logf("[TEST OUTPUT] "+format, args...)
+	FxTestSuite
 }
 
 // testMissingName verifies that a metric without a name short-circuits app startup
 func (suite *MetricTestSuite) testMissingName(o fx.Option) {
-	app := fx.New(
-		fx.Logger(suite),
+	app := suite.newApp(
 		Provide(),
 		o,
 	)
@@ -127,14 +116,12 @@ func (suite *MetricTestSuite) testMissingName(o fx.Option) {
 // testSuccess verifies that a metric got created.  the f parameter is an invoke
 // function that is expected to do verification specific to the type of metric.
 func (suite *MetricTestSuite) testSuccess(o fx.Option, f interface{}) {
-	app := fxtest.New(
-		suite.T(),
+	app := suite.newTestApp(
 		Provide(),
 		o,
 		fx.Invoke(f),
 	)
 
-	suite.NoError(app.Err())
 	app.RequireStart()
 	app.RequireStop()
 }
