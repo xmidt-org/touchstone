@@ -6,6 +6,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/suite"
 	"github.com/xmidt-org/touchstone"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
+	"go.uber.org/fx/fxtest"
 	"go.uber.org/zap"
 )
 
@@ -93,6 +96,17 @@ func (suite *BundleSuite) testPopulateCounters() {
 		)
 	})
 
+	suite.Run("EmptyLabelNames", func() {
+		type bundle struct {
+			C *prometheus.CounterVec `labelNames:""`
+		}
+
+		var b bundle
+		suite.Error(
+			Populate(suite.newFactory(), &b),
+		)
+	})
+
 	suite.Run("InvalidTag", func() {
 		type bundle struct {
 			C prometheus.Counter `buckets:"1.0,2.0"` // invalid for a counter
@@ -146,6 +160,17 @@ func (suite *BundleSuite) testPopulateGauges() {
 		)
 	})
 
+	suite.Run("EmptyLabelNames", func() {
+		type bundle struct {
+			G *prometheus.GaugeVec `labelNames:""`
+		}
+
+		var b bundle
+		suite.Error(
+			Populate(suite.newFactory(), &b),
+		)
+	})
+
 	suite.Run("InvalidTag", func() {
 		type bundle struct {
 			G prometheus.Gauge `buckets:"1.0,2.0"` // invalid for a gauge
@@ -191,6 +216,17 @@ func (suite *BundleSuite) testPopulateHistograms() {
 	suite.Run("MissingLabelNames", func() {
 		type bundle struct {
 			H *prometheus.HistogramVec
+		}
+
+		var b bundle
+		suite.Error(
+			Populate(suite.newFactory(), &b),
+		)
+	})
+
+	suite.Run("EmptyLabelNames", func() {
+		type bundle struct {
+			H *prometheus.HistogramVec `labelNames:""`
 		}
 
 		var b bundle
@@ -255,6 +291,17 @@ func (suite *BundleSuite) testPopulateSummaries() {
 	suite.Run("MissingLabelNames", func() {
 		type bundle struct {
 			S *prometheus.SummaryVec
+		}
+
+		var b bundle
+		suite.Error(
+			Populate(suite.newFactory(), &b),
+		)
+	})
+
+	suite.Run("EmptyLabelNames", func() {
+		type bundle struct {
+			S *prometheus.SummaryVec `labelNames:""`
 		}
 
 		var b bundle
@@ -423,6 +470,119 @@ func (suite *BundleSuite) TestPopulate() {
 	suite.Run("Summaries", suite.testPopulateSummaries)
 	suite.Run("Observers", suite.testPopulateObservers)
 	suite.Run("ObserverVecs", suite.testPopulateObserverVecs)
+}
+
+func (suite *BundleSuite) newApp(options ...fx.Option) *fx.App {
+	app := fx.New(
+		append(
+			[]fx.Option{
+				fx.WithLogger(func() fxevent.Logger {
+					return fxtest.NewTestLogger(suite.T())
+				}),
+				fx.Supply(suite.newFactory()),
+			},
+			options...,
+		)...,
+	)
+
+	suite.Require().NotNil(app)
+	return app
+}
+
+func (suite *BundleSuite) newTestApp(options ...fx.Option) *fxtest.App {
+	app := fxtest.New(
+		suite.T(),
+		append(
+			[]fx.Option{
+				fx.Supply(suite.newFactory()),
+			},
+			options...,
+		)...,
+	)
+
+	suite.Require().NotNil(app)
+	return app
+}
+
+func (suite *BundleSuite) testProvideInvalidPrototype() {
+	app := suite.newApp(
+		Provide(123),
+	)
+
+	suite.Error(app.Err())
+}
+
+func (suite *BundleSuite) testProvideStruct() {
+	type bundle struct {
+		C *prometheus.CounterVec `labelNames:"foo,bar"`
+		G prometheus.Gauge       `name:"gauge"`
+	}
+
+	var b bundle
+	app := suite.newTestApp(
+		Provide(bundle{}),
+		fx.Populate(&b),
+	)
+
+	app.RequireStart()
+	app.RequireStop()
+	suite.NotNil(b.C)
+	suite.NotNil(b.G)
+
+	suite.Run("InvalidBundle", func() {
+		type bundle struct {
+			C *prometheus.CounterVec // missing label names
+		}
+
+		var b bundle
+		app := suite.newApp(
+			Provide(bundle{}),
+			fx.Populate(&b),
+		)
+
+		suite.Error(app.Err())
+		suite.Nil(b.C)
+	})
+}
+
+func (suite *BundleSuite) testProvidePointer() {
+	type bundle struct {
+		C *prometheus.CounterVec `labelNames:"foo,bar"`
+		G prometheus.Gauge       `name:"gauge"`
+	}
+
+	var b *bundle
+	app := suite.newTestApp(
+		Provide(&bundle{}),
+		fx.Populate(&b),
+	)
+
+	app.RequireStart()
+	app.RequireStop()
+	suite.Require().NotNil(b)
+	suite.NotNil(b.C)
+	suite.NotNil(b.G)
+
+	suite.Run("InvalidBundle", func() {
+		type bundle struct {
+			C *prometheus.CounterVec // missing label names
+		}
+
+		var b *bundle
+		app := suite.newApp(
+			Provide(&bundle{}),
+			fx.Populate(&b),
+		)
+
+		suite.Error(app.Err())
+		suite.Nil(b)
+	})
+}
+
+func (suite *BundleSuite) TestProvide() {
+	suite.Run("InvalidPrototype", suite.testProvideInvalidPrototype)
+	suite.Run("Struct", suite.testProvideStruct)
+	suite.Run("Pointer", suite.testProvidePointer)
 }
 
 func TestBundle(t *testing.T) {

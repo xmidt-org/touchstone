@@ -448,9 +448,9 @@ func (mf metricField) labelNames(appendErr error) (values []string, err error) {
 		values[i] = strings.TrimSpace(ln)
 	}
 
-	if len(values) == 0 {
+	if len(values) == 1 && len(values[0]) == 0 {
 		err = multierr.Append(err,
-			mf.fieldErrorf("tag '%s' is required for vector metrics", TagLabelNames),
+			mf.fieldErrorf("tag '%s' is required and cannot be empty for vector metrics", TagLabelNames),
 		)
 	}
 

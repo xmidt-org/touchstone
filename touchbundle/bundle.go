@@ -142,13 +142,14 @@ func Provide(prototype interface{}) fx.Option {
 				factory     = in[0].Interface().(*touchstone.Factory)
 				errValue    = reflect.New(errorType)
 				bundleValue = reflect.New(structType)
+				err         = populate(factory, bundleValue.Elem())
 			)
 
-			errValue.Elem().Set(
-				reflect.ValueOf(
-					populate(factory, bundleValue.Elem()),
-				),
-			)
+			if err != nil {
+				errValue.Elem().Set(
+					reflect.ValueOf(err),
+				)
+			}
 
 			if componentType.Kind() == reflect.Ptr {
 				out[0] = bundleValue
