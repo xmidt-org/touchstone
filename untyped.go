@@ -31,7 +31,7 @@ import (
 // In particular, this function is useful when f has the signature func() int.  This
 // is the common case for things like queue depth, length of a data structure, etc.
 //
-// If f is not a function or is a function with a supported signature,
+// If f is not a function or is a function with an unsupported signature,
 // an error is returned.
 func NewUntypedFunc(opts prometheus.UntypedOpts, f interface{}) (uf prometheus.UntypedFunc, err error) {
 	var untyped func() float64
