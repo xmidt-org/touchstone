@@ -32,8 +32,8 @@ import (
 // is the common case for things like queue depth, length of a data structure, etc.
 //
 // If f is not a function or is a function with a supported signature,
-// this function panics.
-func NewUntypedFunc(opts prometheus.UntypedOpts, f interface{}) prometheus.UntypedFunc {
+// an error is returned.
+func NewUntypedFunc(opts prometheus.UntypedOpts, f interface{}) (uf prometheus.UntypedFunc, err error) {
 	var untyped func() float64
 	switch fn := f.(type) {
 	case func() uint8: // handles byte
@@ -73,13 +73,15 @@ func NewUntypedFunc(opts prometheus.UntypedOpts, f interface{}) prometheus.Untyp
 		untyped = fn
 
 	default:
-		panic(
-			fmt.Errorf(
-				"%T is not a function with the signature func() N, where N is a numeric type",
-				f,
-			),
+		err = fmt.Errorf(
+			"%T is not a function with the signature func() N, where N is a numeric type",
+			f,
 		)
 	}
 
-	return prometheus.NewUntypedFunc(opts, untyped)
+	if err == nil {
+		uf = prometheus.NewUntypedFunc(opts, untyped)
+	}
+
+	return
 }

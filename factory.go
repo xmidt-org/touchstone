@@ -317,18 +317,21 @@ func (f *Factory) NewGaugeVec(o prometheus.GaugeOpts, labelNames ...string) (m *
 }
 
 // NewUntypedFunc creates and registers a new metric backed by the given function.
+// The function must be of a signature supported by the package-level NewUntypedFunc.
 //
 // This method returns an error if the options do not specify a name.  Both namespace
 // and subsystem are defaulted appropriately if not set in the options.
 //
 // See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#NewUntypedFunc
-func (f *Factory) NewUntypedFunc(o prometheus.UntypedOpts, fn func() float64) (m prometheus.UntypedFunc, err error) {
+func (f *Factory) NewUntypedFunc(o prometheus.UntypedOpts, fn interface{}) (m prometheus.UntypedFunc, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
 		ApplyDefaults(&o, f.defaults)
 		f.warnOnNoHelp(o.Name, o.Help)
+		m, err = NewUntypedFunc(o, fn)
+	}
 
-		m = prometheus.NewUntypedFunc(o, fn)
+	if err == nil {
 		err = f.registerer.Register(m)
 	}
 
