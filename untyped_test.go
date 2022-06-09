@@ -63,6 +63,11 @@ func (suite *NewUntypedFuncSuite) setupExpectation(v float64) io.Reader {
 		encoder = expfmt.NewEncoder(output, expfmt.FmtText)
 	)
 
+	if c, ok := encoder.(io.Closer); ok {
+		// the docs say we should always call close, so ...
+		defer c.Close()
+	}
+
 	for _, fam := range families {
 		suite.Require().NoError(
 			encoder.Encode(fam),
