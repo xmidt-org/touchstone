@@ -23,18 +23,18 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// NewUntypedFunc is a variant of prometheus.NewUntypedFunc that allows the
-// function to have a more flexible signature.  The supplied function f must accept
-// no arguments and must return exactly (1) value that is any scalar numeric type.
-// The complex types are not supported.
+// WrapUntypedFunc accepts a function which returns a numeric value
+// and produces a wrapper function that coerces the return to a float64.
+// The returned wrapper function can then be used for prometheus.NewUntypedFunc
+// or the version of NewUntypedFunc in this package.
 //
-// In particular, this function is useful when f has the signature func() int.  This
-// is the common case for things like queue depth, length of a data structure, etc.
+// This function allows an untyped metric to have more flexible signatures
+// than what the prometheus package allows.  The supplied function must not accept
+// any parameters and must only return a single numeric value.  Complex values
+// are not supported.
 //
-// If f is not a function or is a function with an unsupported signature,
-// an error is returned.
-func NewUntypedFunc(opts prometheus.UntypedOpts, f interface{}) (uf prometheus.UntypedFunc, err error) {
-	var untyped func() float64
+// If f was not a function or had an unsupported signature, this function returns nil.
+func WrapUntypedFunc(f interface{}) (untyped func() float64) {
 	switch fn := f.(type) {
 	case func() uint8: // handles byte
 		untyped = func() float64 { return float64(fn()) }
@@ -71,16 +71,28 @@ func NewUntypedFunc(opts prometheus.UntypedOpts, f interface{}) (uf prometheus.U
 
 	case func() float64:
 		untyped = fn
+	}
 
-	default:
+	return
+}
+
+// NewUntypedFunc is a variant of prometheus.NewUntypedFunc that allows the
+// function to have a more flexible signature.  WrapUntypedFunc is used to
+// wrap the given function into a func() float64.
+//
+// In particular, this function is useful when f has the signature func() int.  This
+// is the common case for things like queue depth, length of a data structure, etc.
+//
+// If f is not a function or is a function with an unsupported signature,
+// an error is returned.
+func NewUntypedFunc(opts prometheus.UntypedOpts, f interface{}) (uf prometheus.UntypedFunc, err error) {
+	if untyped := WrapUntypedFunc(f); untyped != nil {
+		uf = prometheus.NewUntypedFunc(opts, untyped)
+	} else {
 		err = fmt.Errorf(
 			"%T is not a function with the signature func() N, where N is a numeric type",
 			f,
 		)
-	}
-
-	if err == nil {
-		uf = prometheus.NewUntypedFunc(opts, untyped)
 	}
 
 	return

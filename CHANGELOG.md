@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 - touchbundle package supports creation of metric bundles, which are logical groups of metrics
 - a version of NewUntypedFunc that allows for flexible function signatures
+- WrapUntypedFunc exposes the basic logic around wrapping closures for metrics
+- touchbundle now supports untyped metrics
 
 ## [v0.1.0]
 - Updated go.uber.org/fx to 1.17.1

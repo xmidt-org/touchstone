@@ -240,9 +240,22 @@ func (mf metricField) newObserverOpts() (opts interface{}, err error) {
 	return
 }
 
-// newOpts creates a metric *Opts struct, along with label names, if this
-// field is of a type supported by touchstone.
-func (mf metricField) newOpts() (opts interface{}, labelNames []string, err error) {
+func (mf metricField) newUntypedOpts() (opts prometheus.UntypedOpts, err error) {
+	err = mf.checkTagNotAllowed(err, observerTagNames...)
+	opts = prometheus.UntypedOpts{
+		Name:      mf.name(),
+		Help:      mf.help(),
+		Namespace: mf.namespace(),
+		Subsystem: mf.subsystem(),
+	}
+
+	return
+}
+
+// newTypedOpts creates a metric *Opts struct, along with label names, if this
+// field is of a type supported by touchstone.  This method checks each of
+// the metric types against the field type.
+func (mf metricField) newTypedOpts() (opts interface{}, labelNames []string, err error) {
 	switch mf.Type {
 	case counterType:
 		opts, err = mf.newCounterOpts()

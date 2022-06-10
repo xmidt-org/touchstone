@@ -33,12 +33,31 @@ type Bundle interface{}
 // must be an addressable, settable struct.
 func populate(factory *touchstone.Factory, bundle reflect.Value) (err error) {
 	for i := 0; i < bundle.NumField(); i++ {
-		f := metricField(bundle.Type().Field(i))
-		if f.skip() {
+		mf := metricField(bundle.Type().Field(i))
+		if mf.skip() {
 			continue
 		}
 
-		opts, labelNames, fieldErr := f.newOpts()
+		fieldValue := bundle.Field(i)
+
+		// (1) check if this is an untyped metric.  the field's value will be a
+		// function with the correct signature.
+		if untyped := touchstone.WrapUntypedFunc(fieldValue.Interface()); untyped != nil {
+			opts, fieldErr := mf.newUntypedOpts()
+			err = multierr.Append(err, fieldErr)
+
+			if fieldErr == nil {
+				_, fieldErr = factory.NewUntypedFunc(opts, untyped)
+				err = multierr.Append(err, fieldErr)
+			}
+
+			// we don't bother setting any struct field here, as the caller supplies
+			// a function to use as the source of metrics.
+			continue
+		}
+
+		// (2) check if this is a known metric type
+		opts, labelNames, fieldErr := mf.newTypedOpts()
 		err = multierr.Append(err, fieldErr)
 		if opts == nil || fieldErr != nil {
 			continue
@@ -53,7 +72,7 @@ func populate(factory *touchstone.Factory, bundle reflect.Value) (err error) {
 
 		err = multierr.Append(err, fieldErr)
 		if fieldErr == nil {
-			bundle.Field(i).Set(reflect.ValueOf(metric))
+			fieldValue.Set(reflect.ValueOf(metric))
 		}
 	}
 
