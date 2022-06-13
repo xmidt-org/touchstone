@@ -5,14 +5,20 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
 - touchbundle package supports creation of metric bundles, which are logical groups of metrics
 - a version of NewUntypedFunc that allows for flexible function signatures
 
 ## [v0.1.0]
+
+### Updated
 - Updated go.uber.org/fx to 1.17.1
 - Updated github.com/prometheus/client_golang to 1.12.1
-- Remove use of fx.Printer for messages.  Replaced with an optional zap.Logger.
 - Fx components are now grouped under a common module.
+
+### Removed 
+- Remove use of fx.Printer for messages.  Replaced with an optional zap.Logger.
 
 ### Fixed
 - Broken README badge links. [#12](https://github.com/xmidt-org/touchstone/pull/12)
