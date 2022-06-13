@@ -80,6 +80,10 @@ func populate(factory *touchstone.Factory, bundle reflect.Value) (err error) {
 }
 
 // Populate fills out a bundle with metrics created by the given Factory.
+//
+// For any function fields in the bundle that match a signature for WrapUntypedFunc,
+// a prometheus.UntypedFunc metric is created using that struct field.  The field
+// must not be nil in that case, or a panic will result.
 func Populate(f *touchstone.Factory, b Bundle) error {
 	bv := reflect.ValueOf(b)
 	if bv.Kind() == reflect.Ptr && !bv.IsNil() {
@@ -145,6 +149,12 @@ func Provide(prototype interface{}) fx.Option {
 				prototype,
 			),
 		)
+	}
+
+	// any closures that can be used as untyped functions have to be injected
+	// from the enclosing fx.App.
+	fields := scanForUntypedFuncs(structType)
+	if len(fields) > 0 {
 	}
 
 	ctor := reflect.MakeFunc(
