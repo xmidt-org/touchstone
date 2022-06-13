@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [v0.1.1]
+
 ### Added
 - touchbundle package supports creation of metric bundles, which are logical groups of metrics
 - a version of NewUntypedFunc that allows for flexible function signatures
@@ -43,7 +45,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - bootstrapping for the HTTP environment
 - bundled HTTP metrics
 
-[Unreleased]: https://github.com/xmidt-org/touchstone/compare/v0.1.0..HEAD
+[Unreleased]: https://github.com/xmidt-org/touchstone/compare/v0.1.1..HEAD
+[v0.1.1]: https://github.com/xmidt-org/touchstone/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/xmidt-org/touchstone/compare/v0.0.3...v0.1.0
 [v0.0.3]: https://github.com/xmidt-org/touchstone/compare/v0.0.2...v0.0.3
 [v0.0.2]: https://github.com/xmidt-org/touchstone/compare/v0.0.1...v0.0.2
