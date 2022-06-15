@@ -43,9 +43,7 @@ func AsAlreadyRegisteredError(err error) *prometheus.AlreadyRegisteredError {
 //
 // If err was not a prometheus.AlreadyRegisteredError or if the existing collector
 // was not assignable to the target, this function returns the original error.
-// Otherwise, this function returns nil.  Note that target is completely ignored if
-// err is not a prometheus.AlreadyRegisteredError, in which case this function
-// returns nil.
+// Otherwise, this function returns nil.
 //
 // A typical use of this method is to allow client code to ignore already registered
 // errors and just take the previously registered metric:
