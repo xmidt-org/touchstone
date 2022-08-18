@@ -23,6 +23,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/xmidt-org/touchstone"
+	"go.uber.org/fx"
 	"go.uber.org/multierr"
 )
 
@@ -202,6 +203,9 @@ type ServerBundle struct {
 // This method may be called multiple times with different prometheus.Labels.  In that case
 // each call must supply the same label names, or the underlying prometheus library will
 // return an error.
+//
+// In an uber/fx application, this method provides lower-level control over the various
+// components via fx.Annotate.
 func (sb ServerBundle) ForServer(f *touchstone.Factory, l prometheus.Labels) (si ServerInstrumenter, err error) {
 	var extra, full []string
 	extra, full, err = labelNames(l)
@@ -234,6 +238,52 @@ func (sb ServerBundle) ForServer(f *touchstone.Factory, l prometheus.Labels) (si
 	multierr.AppendInto(&err, metricErr)
 
 	return
+}
+
+// Provide creates the ServerInstrumenter for this bundle.  The default labels are used,
+// and a *touchstone.Factory must be supplied in the enclosing application.
+//
+// Typical usage:
+//
+//   fx.New(
+//     // Example 1: take the default metrics
+//     touchhttp.ServerBundle{}.Provide(),
+//
+//     // Example 2: a custom metric
+//     touchhttp.ServerBundle{
+//       Count: prometheus.CounterOpts{
+//         Name: "custom_count",
+//       },
+//     }.Provide(),
+//
+//     fx.Invoke(
+//       func(si ServerInstrumenter) {
+//         // whichever example is used, we can now
+//         // use si.Then to decorate server handlers
+//       },
+//     ),
+//   )
+func (sb ServerBundle) Provide() fx.Option {
+	return fx.Provide(
+		func(f *touchstone.Factory) (ServerInstrumenter, error) {
+			return sb.ForServer(f, nil)
+		},
+	)
+}
+
+// ProvideNamed is like Provide, save that the ServerInstrumenter is provided
+// as a component with the given name instead of a global, unnamed component.
+func (sb ServerBundle) ProvideNamed(name string) fx.Option {
+	return fx.Provide(
+		fx.Annotate(
+			func(f *touchstone.Factory) (ServerInstrumenter, error) {
+				return sb.ForServer(f, nil)
+			},
+			fx.ResultTags(
+				fmt.Sprintf(`name:"%s"`, name),
+			),
+		),
+	)
 }
 
 type ClientBundle struct {
