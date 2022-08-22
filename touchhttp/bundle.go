@@ -238,7 +238,7 @@ func (sb ServerBundle) newRequestSize(f *touchstone.Factory, labelNames []string
 	return newObserverVec(f, opts, labelNames, curry)
 }
 
-func (sb ServerBundle) newServerDuration(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
+func (sb ServerBundle) newDuration(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
 	var opts interface{}
 	if sb.Duration != nil {
 		switch t := sb.Duration.(type) {
@@ -322,7 +322,7 @@ func (sb ServerBundle) NewInstrumenter(labelNamesAndValues ...string) func(*touc
 		si.requestSize, metricErr = sb.newRequestSize(f, fullNames, curry)
 		multierr.AppendInto(&err, metricErr)
 
-		si.duration, metricErr = sb.newServerDuration(f, fullNames, curry)
+		si.duration, metricErr = sb.newDuration(f, fullNames, curry)
 		multierr.AppendInto(&err, metricErr)
 
 		return
@@ -364,13 +364,49 @@ func (cb ClientBundle) newInFlight(f *touchstone.Factory, labelNames []string, c
 }
 
 func (cb ClientBundle) newRequestSize(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
-	touchstone.ApplyDefaults(&cb.RequestSize, defaultClientRequestSize)
-	return newObserverVec(f, cb.RequestSize, labelNames, curry)
+	var opts interface{}
+	if cb.RequestSize != nil {
+		switch t := cb.RequestSize.(type) {
+		case prometheus.HistogramOpts:
+			touchstone.ApplyDefaults(&t, defaultClientRequestSize)
+			opts = t
+
+		case prometheus.SummaryOpts:
+			touchstone.ApplyDefaults(&t, defaultClientRequestSize)
+			opts = t
+
+		default:
+			return nil, errors.New("ClientBundle.RequestSize must be nil, a prometheus.HistogramOpts, or a prometheus.SummaryOpts")
+		}
+	} else {
+		clone := defaultClientRequestSize
+		opts = clone
+	}
+
+	return newObserverVec(f, opts, labelNames, curry)
 }
 
-func (cb ClientBundle) newRequestDuration(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
-	touchstone.ApplyDefaults(&cb.Duration, defaultClientDuration)
-	return newObserverVec(f, cb.Duration, labelNames, curry)
+func (cb ClientBundle) newDuration(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
+	var opts interface{}
+	if cb.Duration != nil {
+		switch t := cb.Duration.(type) {
+		case prometheus.HistogramOpts:
+			touchstone.ApplyDefaults(&t, defaultClientDuration)
+			opts = t
+
+		case prometheus.SummaryOpts:
+			touchstone.ApplyDefaults(&t, defaultClientDuration)
+			opts = t
+
+		default:
+			return nil, errors.New("ClientBundle.Duration must be nil, a prometheus.HistogramOpts, or a prometheus.SummaryOpts")
+		}
+	} else {
+		clone := defaultClientDuration
+		opts = clone
+	}
+
+	return newObserverVec(f, opts, labelNames, curry)
 }
 
 func (cb ClientBundle) newErrorCount(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (*prometheus.CounterVec, error) {
@@ -431,7 +467,7 @@ func (cb ClientBundle) NewInstrumenter(labelNamesAndValues ...string) func(*touc
 		ci.requestSize, metricErr = cb.newRequestSize(f, fullNames, curry)
 		multierr.AppendInto(&err, metricErr)
 
-		ci.duration, metricErr = cb.newRequestDuration(f, fullNames, curry)
+		ci.duration, metricErr = cb.newDuration(f, fullNames, curry)
 		multierr.AppendInto(&err, metricErr)
 
 		ci.errorCount, metricErr = cb.newErrorCount(f, fullNames, curry)
