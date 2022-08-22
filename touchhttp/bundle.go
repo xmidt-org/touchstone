@@ -242,7 +242,7 @@ func (sb ServerBundle) newServerDuration(f *touchstone.Factory, labelNames []str
 //     touchstone.Provide(), // bootstraps the metrics environment
 //
 //     // Create a single, unnamed ServerInstrumenter with no extra labels
-//     touchhttp.ServerBundle{}.NewInstrumenter,
+//     touchhttp.ServerBundle{}.NewInstrumenter(),
 //
 //     // Create a named ServerInstrumenter with a label identifying a particular server
 //     fx.Annotated{
@@ -351,7 +351,7 @@ func (cb ClientBundle) newErrorCount(f *touchstone.Factory, labelNames []string,
 //     touchstone.Provide(), // bootstraps the metrics environment
 //
 //     // Create a single, unnamed ClientInstrumenter with no extra labels
-//     touchhttp.ClientBundle{}.NewInstrumenter,
+//     touchhttp.ClientBundle{}.NewInstrumenter(),
 //
 //     // Create a named ClientInstrumenter with a label identifying a particular client
 //     fx.Annotated{
