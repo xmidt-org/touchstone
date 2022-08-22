@@ -139,7 +139,7 @@ func labelNames(lvs []string) (names []string, curry prometheus.Labels, err erro
 	if err == nil {
 		names = make([]string, 0, len(lvs)/2)
 		curry = make(prometheus.Labels, len(names))
-		for i, j := 0, 1; err == nil && i < len(lvs); i, j = i+1, j+1 {
+		for i, j := 0, 1; err == nil && i < len(lvs); i, j = i+2, j+2 {
 			if lvs[i] == CodeLabel || lvs[i] == MethodLabel {
 				err = ErrReservedLabelName
 				continue
@@ -190,14 +190,14 @@ type ServerBundle struct {
 	// InFlight describes the options used for the instaneous request gauge
 	InFlight prometheus.GaugeOpts
 
-	// RequestSize describes the options for the request size observer.  A panic
-	// will result if this field is not nil, a prometheus.HistogramOpts, or
-	// a prometheus.SummaryOpts.
+	// RequestSize describes the options for the request size observer.  If this
+	// field is set, it must be either a prometheus.HistogramOpts or a prometheus.SummaryOpts.
+	// The type of Opts struct will determine the type of metric created.
 	RequestSize interface{}
 
-	// Duration describes the options for the request duration observer.  A panic
-	// will result if this field is not nil, a prometheus.HistogramOpts, or
-	// a prometheus.SummaryOpts.
+	// Duration describes the options for the request duration observer.  If this field is
+	// set, it must be either a prometheus.HistogramOpts or a prometheus.SummaryOpts.
+	// The type of Opts struct will determine the type of metric created.
 	Duration interface{}
 
 	// Now is the strategy for extracting the current system time.  If unset,
@@ -216,13 +216,49 @@ func (sb ServerBundle) newInFlight(f *touchstone.Factory, labelNames []string, c
 }
 
 func (sb ServerBundle) newRequestSize(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
-	touchstone.ApplyDefaults(&sb.RequestSize, defaultServerRequestSize)
-	return newObserverVec(f, sb.RequestSize, labelNames, curry)
+	var opts interface{}
+	if sb.RequestSize != nil {
+		switch t := sb.RequestSize.(type) {
+		case prometheus.HistogramOpts:
+			touchstone.ApplyDefaults(&t, defaultServerRequestSize)
+			opts = t
+
+		case prometheus.SummaryOpts:
+			touchstone.ApplyDefaults(&t, defaultServerRequestSize)
+			opts = t
+
+		default:
+			return nil, errors.New("ServerBundle.RequestSize must be nil, a prometheus.HistogramOpts, or a prometheus.SummaryOpts")
+		}
+	} else {
+		clone := defaultServerRequestSize
+		opts = clone
+	}
+
+	return newObserverVec(f, opts, labelNames, curry)
 }
 
 func (sb ServerBundle) newServerDuration(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
-	touchstone.ApplyDefaults(&sb.Duration, defaultServerDuration)
-	return newObserverVec(f, sb.Duration, labelNames, curry)
+	var opts interface{}
+	if sb.Duration != nil {
+		switch t := sb.Duration.(type) {
+		case prometheus.HistogramOpts:
+			touchstone.ApplyDefaults(&t, defaultServerDuration)
+			opts = t
+
+		case prometheus.SummaryOpts:
+			touchstone.ApplyDefaults(&t, defaultServerDuration)
+			opts = t
+
+		default:
+			return nil, errors.New("ServerBundle.Duration must be nil, a prometheus.HistogramOpts, or a prometheus.SummaryOpts")
+		}
+	} else {
+		clone := defaultServerDuration
+		opts = clone
+	}
+
+	return newObserverVec(f, opts, labelNames, curry)
 }
 
 // NewInstrumenter creates a constructor that can be passed to fx.Provide or annotated
