@@ -73,7 +73,7 @@ func (suite *FactoryTestSuite) labelsPresent(v interface{}, labelNames ...string
 		return
 
 	default:
-		suite.Require().Fail("Invalid labelled metric type", "%T", v)
+		suite.Require().Fail("Invalid labeled metric type", "%T", v)
 	}
 
 	suite.Require().NotNil(vec)
