@@ -25,6 +25,8 @@ import (
 	"github.com/xmidt-org/httpaux"
 	"github.com/xmidt-org/httpaux/client"
 	"github.com/xmidt-org/httpaux/observe"
+	"github.com/xmidt-org/touchstone"
+	"go.uber.org/fx"
 )
 
 // transaction represents a completed HTTP transaction.
@@ -133,3 +135,49 @@ func (ci ClientInstrumenter) Then(next httpaux.Client) httpaux.Client {
 }
 
 var _ client.Constructor = ClientInstrumenter{}.Then
+
+// ServerInstrumenterIn defines the set of dependencies required to build a ServerInstrumenter.
+type ServerInstrumenterIn struct {
+	fx.In
+
+	// Factory is the required touchstone Factory instance.
+	Factory *touchstone.Factory
+
+	// Bundle is the optional ServerBundle supplied in the application.
+	// If not present, the default metrics are used.
+	Bundle ServerBundle `optional:"true"`
+}
+
+// NewServerInstrumenter produces a constructor that can be passed to fx.Provide.  The returned
+// constructor allows a ServerBundle to be injected.
+//
+// Use this function when a ServerBundle has been supplied to the enclosing fx.App:
+//
+//   app := fx.New(
+//     touchstone.Provide(), // bootstrap metrics subsystem
+//
+//     fx.Provide(
+//       // A single, global ServerInstrumenter
+//       touchhttp.NewServerInstrumenter(),
+//
+//       // A custom label
+//       touchhttp.NewServerInstrumenter(
+//         "custom1", "value",
+//       ),
+//
+//       // A named ServerInstrumenter with a server label
+//       fx.Annotated{
+//         Name: "servers.main",
+//         Target: NewServerInstrumenter(
+//           touchhttp.ServerLabel, "servers.main",
+//         ),
+//       },
+//     ),
+//   )
+func NewServerInstrumenter(namesAndValues ...string) func(ServerInstrumenterIn) (ServerInstrumenter, error) {
+	return func(in ServerInstrumenterIn) (ServerInstrumenter, error) {
+		return in.Bundle.NewInstrumenter(
+			namesAndValues...,
+		)(in.Factory)
+	}
+}

@@ -18,6 +18,7 @@
 package touchhttp
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -73,6 +74,10 @@ var (
 		MethodLabel,
 	)
 
+	// ErrInvalidLabelCount indicates that an odd number of name/value pairs were
+	// passed when creating metrics.
+	ErrInvalidLabelCount = errors.New("The number of label names and values must be even")
+
 	defaultServerCount = prometheus.CounterOpts{
 		Name: DefaultServerCount,
 		Help: "the total number of requests received since startup",
@@ -123,24 +128,28 @@ var (
 	}
 )
 
-// labelNames extracts the names from the given Labels map.  This function
-// performs a single allocation and returns two slices of names:  (1) extra
-// are the label names other than the reserved names that are curried for
-// a given server or client, and (2) full are all the label names, including
-// the reserved names.
-func labelNames(l prometheus.Labels) (extra, full []string, err error) {
-	full = make([]string, 0, len(l))
-	for n := range l {
-		if n == CodeLabel || n == MethodLabel {
-			err = ErrReservedLabelName
-			return
-		} else {
-			full = append(full, n)
+// labelNames takes a sequence of name/value pairs and converts that into
+// a slice of names and a prometheus.Labels which should be used to curry
+// the associated metric.
+func labelNames(lvs []string) (names []string, curry prometheus.Labels, err error) {
+	if len(lvs)%2 != 0 {
+		err = ErrInvalidLabelCount
+	}
+
+	if err == nil {
+		names = make([]string, 0, len(lvs)/2)
+		curry = make(prometheus.Labels, len(names))
+		for i, j := 0, 1; err == nil && i < len(lvs); i, j = i+2, j+2 {
+			if lvs[i] == CodeLabel || lvs[i] == MethodLabel {
+				err = ErrReservedLabelName
+				continue
+			}
+
+			names = append(names, lvs[i])
+			curry[lvs[i]] = lvs[j]
 		}
 	}
 
-	full = append(full, CodeLabel, MethodLabel)
-	extra = full[0 : len(full)-2]
 	return
 }
 
@@ -181,14 +190,14 @@ type ServerBundle struct {
 	// InFlight describes the options used for the instaneous request gauge
 	InFlight prometheus.GaugeOpts
 
-	// RequestSize describes the options for the request size observer.  A panic
-	// will result if this field is not nil, a prometheus.HistogramOpts, or
-	// a prometheus.SummaryOpts.
+	// RequestSize describes the options for the request size observer.  If this
+	// field is set, it must be either a prometheus.HistogramOpts or a prometheus.SummaryOpts.
+	// The type of Opts struct will determine the type of metric created.
 	RequestSize interface{}
 
-	// Duration describes the options for the request duration observer.  A panic
-	// will result if this field is not nil, a prometheus.HistogramOpts, or
-	// a prometheus.SummaryOpts.
+	// Duration describes the options for the request duration observer.  If this field is
+	// set, it must be either a prometheus.HistogramOpts or a prometheus.SummaryOpts.
+	// The type of Opts struct will determine the type of metric created.
 	Duration interface{}
 
 	// Now is the strategy for extracting the current system time.  If unset,
@@ -196,44 +205,130 @@ type ServerBundle struct {
 	Now func() time.Time
 }
 
-// ForServer produces a ServerInstrumenter using this bundle of metric options.  The internal
-// server defaults are applied to each option for fields that are unset, e.g. metric names.
+func (sb ServerBundle) newRequestCount(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (*prometheus.CounterVec, error) {
+	touchstone.ApplyDefaults(&sb.Count, defaultServerCount)
+	return newCounterVec(f, sb.Count, labelNames, curry)
+}
+
+func (sb ServerBundle) newInFlight(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.Gauge, error) {
+	touchstone.ApplyDefaults(&sb.InFlight, defaultServerInFlight)
+	return newGauge(f, sb.InFlight, labelNames, curry)
+}
+
+func (sb ServerBundle) newRequestSize(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
+	var opts interface{}
+	if sb.RequestSize != nil {
+		switch t := sb.RequestSize.(type) {
+		case prometheus.HistogramOpts:
+			touchstone.ApplyDefaults(&t, defaultServerRequestSize)
+			opts = t
+
+		case prometheus.SummaryOpts:
+			touchstone.ApplyDefaults(&t, defaultServerRequestSize)
+			opts = t
+
+		default:
+			return nil, errors.New("ServerBundle.RequestSize must be nil, a prometheus.HistogramOpts, or a prometheus.SummaryOpts")
+		}
+	} else {
+		clone := defaultServerRequestSize
+		opts = clone
+	}
+
+	return newObserverVec(f, opts, labelNames, curry)
+}
+
+func (sb ServerBundle) newDuration(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
+	var opts interface{}
+	if sb.Duration != nil {
+		switch t := sb.Duration.(type) {
+		case prometheus.HistogramOpts:
+			touchstone.ApplyDefaults(&t, defaultServerDuration)
+			opts = t
+
+		case prometheus.SummaryOpts:
+			touchstone.ApplyDefaults(&t, defaultServerDuration)
+			opts = t
+
+		default:
+			return nil, errors.New("ServerBundle.Duration must be nil, a prometheus.HistogramOpts, or a prometheus.SummaryOpts")
+		}
+	} else {
+		clone := defaultServerDuration
+		opts = clone
+	}
+
+	return newObserverVec(f, opts, labelNames, curry)
+}
+
+// NewInstrumenter creates a constructor that can be passed to fx.Provide or annotated
+// as needed.
 //
-// This method may be called multiple times with different prometheus.Labels.  In that case
-// each call must supply the same label names, or the underlying prometheus library will
-// return an error.
-func (sb ServerBundle) ForServer(f *touchstone.Factory, l prometheus.Labels) (si ServerInstrumenter, err error) {
-	var extra, full []string
-	extra, full, err = labelNames(l)
-	if err != nil {
+// The namesAndValues are any extra, curried labels to apply to all the created
+// metrics.  If multiple calls to this method on the same ServerBundle instance are made,
+// the extra label names must match though the values may differ.
+//
+// If namesAndValues contatins and odd number of entries or if it contains any of
+// the reserved label names used by this package, and error is returned by the returned
+// constructor.
+//
+// Typical usage:
+//
+//   app := fx.New(
+//     touchstone.Provide(), // bootstraps the metrics environment
+//
+//     fx.Provide(
+//       // Create a single, unnamed ServerInstrumenter with no extra labels
+//       touchhttp.ServerBundle{}.NewInstrumenter(),
+//
+//       // Create a named ServerInstrumenter with a label identifying a particular server
+//       fx.Annotated{
+//         Name: "servers.main",
+//         Target: touchhttp.ServerBundle{}.NewInstrumenter(
+//           touchhttp.ServerLabel, "servers.main",
+//         ),
+//       },
+//     ),
+//   )
+func (sb ServerBundle) NewInstrumenter(namesAndValues ...string) func(*touchstone.Factory) (ServerInstrumenter, error) {
+	return func(f *touchstone.Factory) (si ServerInstrumenter, err error) {
+		var (
+			extraNames []string
+			curry      prometheus.Labels
+		)
+
+		extraNames, curry, err = labelNames(namesAndValues)
+		if err != nil {
+			return
+		}
+
+		// fullNames will include the extra names plus code and method labels
+		fullNames := make([]string, 0, len(extraNames)+2)
+		fullNames = append(fullNames, extraNames...)
+		fullNames = append(fullNames, CodeLabel, MethodLabel)
+
+		si.now = sb.Now
+		if si.now == nil {
+			si.now = time.Now
+		}
+
+		var metricErr error
+
+		si.count, metricErr = sb.newRequestCount(f, fullNames, curry)
+		multierr.AppendInto(&err, metricErr)
+
+		// InFlight is slightly different, as it doesn't have code or method labels
+		si.inFlight, metricErr = sb.newInFlight(f, extraNames, curry)
+		multierr.AppendInto(&err, metricErr)
+
+		si.requestSize, metricErr = sb.newRequestSize(f, fullNames, curry)
+		multierr.AppendInto(&err, metricErr)
+
+		si.duration, metricErr = sb.newDuration(f, fullNames, curry)
+		multierr.AppendInto(&err, metricErr)
+
 		return
 	}
-
-	si.now = sb.Now
-	if si.now == nil {
-		si.now = time.Now
-	}
-
-	var metricErr error
-
-	touchstone.ApplyDefaults(&sb.Count, defaultServerCount)
-	si.count, metricErr = newCounterVec(f, sb.Count, full, l)
-	multierr.AppendInto(&err, metricErr)
-
-	// InFlight is slightly different, as it doesn't have code or method labels
-	touchstone.ApplyDefaults(&sb.InFlight, defaultServerInFlight)
-	si.inFlight, metricErr = newGauge(f, sb.InFlight, extra, l)
-	multierr.AppendInto(&err, metricErr)
-
-	touchstone.ApplyDefaults(&sb.RequestSize, defaultServerRequestSize)
-	si.requestSize, metricErr = newObserverVec(f, sb.RequestSize, full, l)
-	multierr.AppendInto(&err, metricErr)
-
-	touchstone.ApplyDefaults(&sb.Duration, defaultServerDuration)
-	si.duration, metricErr = newObserverVec(f, sb.Duration, full, l)
-	multierr.AppendInto(&err, metricErr)
-
-	return
 }
 
 type ClientBundle struct {
@@ -260,46 +355,128 @@ type ClientBundle struct {
 	Now func() time.Time
 }
 
-// ForClient produces a ClientInstrumenter using this bundle of metric options.  The internal
-// server defaults are applied to each option for fields that are unset, e.g. metric names.
+func (cb ClientBundle) newRequestCount(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (*prometheus.CounterVec, error) {
+	touchstone.ApplyDefaults(&cb.Count, defaultClientCount)
+	return newCounterVec(f, cb.Count, labelNames, curry)
+}
+
+func (cb ClientBundle) newInFlight(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.Gauge, error) {
+	touchstone.ApplyDefaults(&cb.InFlight, defaultClientInFlight)
+	return newGauge(f, cb.InFlight, labelNames, curry)
+}
+
+func (cb ClientBundle) newRequestSize(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
+	var opts interface{}
+	if cb.RequestSize != nil {
+		switch t := cb.RequestSize.(type) {
+		case prometheus.HistogramOpts:
+			touchstone.ApplyDefaults(&t, defaultClientRequestSize)
+			opts = t
+
+		case prometheus.SummaryOpts:
+			touchstone.ApplyDefaults(&t, defaultClientRequestSize)
+			opts = t
+
+		default:
+			return nil, errors.New("ClientBundle.RequestSize must be nil, a prometheus.HistogramOpts, or a prometheus.SummaryOpts")
+		}
+	} else {
+		clone := defaultClientRequestSize
+		opts = clone
+	}
+
+	return newObserverVec(f, opts, labelNames, curry)
+}
+
+func (cb ClientBundle) newDuration(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
+	var opts interface{}
+	if cb.Duration != nil {
+		switch t := cb.Duration.(type) {
+		case prometheus.HistogramOpts:
+			touchstone.ApplyDefaults(&t, defaultClientDuration)
+			opts = t
+
+		case prometheus.SummaryOpts:
+			touchstone.ApplyDefaults(&t, defaultClientDuration)
+			opts = t
+
+		default:
+			return nil, errors.New("ClientBundle.Duration must be nil, a prometheus.HistogramOpts, or a prometheus.SummaryOpts")
+		}
+	} else {
+		clone := defaultClientDuration
+		opts = clone
+	}
+
+	return newObserverVec(f, opts, labelNames, curry)
+}
+
+func (cb ClientBundle) newErrorCount(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (*prometheus.CounterVec, error) {
+	touchstone.ApplyDefaults(&cb.ErrorCount, defaultClientErrorCount)
+	return newCounterVec(f, cb.ErrorCount, labelNames, curry)
+}
+
+// NewInstrumenter creates a constructor that can be passed to fx.Provide.  The returned constructor
+// creates a ClientInstrumenter given a *touchstone.Factory.
 //
-// This method may be called multiple times with different prometheus.Labels.  In that case
-// each call must supply the same label names, or the underlying prometheus library will
-// return an error.
-func (cb ClientBundle) ForClient(f *touchstone.Factory, l prometheus.Labels) (ci ClientInstrumenter, err error) {
-	var extra, full []string
-	extra, full, err = labelNames(l)
-	if err != nil {
+// Similar typical usage to ServerBundle.NewInstrumenter:
+//
+//   app := fx.New(
+//     touchstone.Provide(), // bootstraps the metrics environment
+//
+//     fx.Provide(
+//       // Create a single, unnamed ClientInstrumenter with no extra labels
+//       touchhttp.ClientBundle{}.NewInstrumenter(),
+//
+//       // Create a named ClientInstrumenter with a label identifying a particular client
+//       fx.Annotated{
+//         Name: "clients.main",
+//         Target: touchhttp.ClientBundle{}.NewInstrumenter(
+//           touchhttp.ClientLabel, "clients.main",
+//         ),
+//       },
+//     ),
+//   )
+func (cb ClientBundle) NewInstrumenter(namesAndValues ...string) func(*touchstone.Factory) (ClientInstrumenter, error) {
+	return func(f *touchstone.Factory) (ci ClientInstrumenter, err error) {
+		var (
+			extraNames []string
+			curry      prometheus.Labels
+		)
+
+		extraNames, curry, err = labelNames(namesAndValues)
+		if err != nil {
+			return
+		}
+
+		// fullNames will include the extra names plus code and method labels
+		fullNames := make([]string, 0, len(extraNames)+2)
+		fullNames = append(fullNames, extraNames...)
+		fullNames = append(fullNames, CodeLabel, MethodLabel)
+
+		ci.now = cb.Now
+		if ci.now == nil {
+			ci.now = time.Now
+		}
+
+		var metricErr error
+
+		ci.count, metricErr = cb.newRequestCount(f, fullNames, curry)
+		multierr.AppendInto(&err, metricErr)
+
+		// InFlight is slightly different, as it doesn't have code or method labels
+		ci.inFlight, metricErr = cb.newInFlight(f, extraNames, curry)
+		multierr.AppendInto(&err, metricErr)
+
+		ci.requestSize, metricErr = cb.newRequestSize(f, fullNames, curry)
+		multierr.AppendInto(&err, metricErr)
+
+		ci.duration, metricErr = cb.newDuration(f, fullNames, curry)
+		multierr.AppendInto(&err, metricErr)
+
+		ci.errorCount, metricErr = cb.newErrorCount(f, fullNames, curry)
+		multierr.AppendInto(&err, metricErr)
+
 		return
 	}
-
-	ci.now = cb.Now
-	if ci.now == nil {
-		ci.now = time.Now
-	}
-
-	var metricErr error
-
-	touchstone.ApplyDefaults(&cb.Count, defaultClientCount)
-	ci.count, metricErr = newCounterVec(f, cb.Count, full, l)
-	multierr.AppendInto(&err, metricErr)
-
-	// InFlight is slightly different, as it doesn't have code or method labels
-	touchstone.ApplyDefaults(&cb.InFlight, defaultClientInFlight)
-	ci.inFlight, metricErr = newGauge(f, cb.InFlight, extra, l)
-	multierr.AppendInto(&err, metricErr)
-
-	touchstone.ApplyDefaults(&cb.RequestSize, defaultClientRequestSize)
-	ci.requestSize, metricErr = newObserverVec(f, cb.RequestSize, full, l)
-	multierr.AppendInto(&err, metricErr)
-
-	touchstone.ApplyDefaults(&cb.Duration, defaultClientDuration)
-	ci.duration, metricErr = newObserverVec(f, cb.Duration, full, l)
-	multierr.AppendInto(&err, metricErr)
-
-	touchstone.ApplyDefaults(&cb.ErrorCount, defaultClientErrorCount)
-	ci.errorCount, metricErr = newCounterVec(f, cb.ErrorCount, full, l)
-	multierr.AppendInto(&err, metricErr)
-
-	return
 }
