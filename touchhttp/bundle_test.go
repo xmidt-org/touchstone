@@ -106,3 +106,72 @@ func (suite *ServerBundleSuite) TestNewInstrumenter() {
 func TestServerBundle(t *testing.T) {
 	suite.Run(t, new(ServerBundleSuite))
 }
+
+type ClientBundleSuite struct {
+	BundleSuite
+}
+
+func (suite *ClientBundleSuite) testNewInstrumenterDefaults() {
+	var (
+		ci ClientInstrumenter
+
+		app = fxtest.New(
+			suite.T(),
+			touchstone.Provide(),
+			fx.Provide(
+				ClientBundle{}.NewInstrumenter(),
+			),
+			fx.Populate(&ci),
+		)
+	)
+
+	app.RequireStart()
+	app.RequireStop()
+}
+
+func (suite *ClientBundleSuite) testNewInstrumenterNamed() {
+	var (
+		cb ClientBundle
+
+		app = fxtest.New(
+			suite.T(),
+			touchstone.Provide(),
+			fx.Provide(
+				fx.Annotated{
+					Name: "clients.main",
+					Target: cb.NewInstrumenter(
+						ClientLabel, "clients.main",
+					),
+				},
+				fx.Annotated{
+					Name: "clients.consul",
+					Target: cb.NewInstrumenter(
+						ClientLabel, "clients.consul",
+					),
+				},
+			),
+			fx.Invoke(
+				fx.Annotate(
+					func(ClientInstrumenter) {},
+					fx.ParamTags(`name:"clients.main"`),
+				),
+				fx.Annotate(
+					func(ClientInstrumenter) {},
+					fx.ParamTags(`name:"clients.consul"`),
+				),
+			),
+		)
+	)
+
+	app.RequireStart()
+	app.RequireStop()
+}
+
+func (suite *ClientBundleSuite) TestNewInstrumenter() {
+	suite.Run("Defaults", suite.testNewInstrumenterDefaults)
+	suite.Run("Named", suite.testNewInstrumenterNamed)
+}
+
+func TestClientBundle(t *testing.T) {
+	suite.Run(t, new(ClientBundleSuite))
+}
