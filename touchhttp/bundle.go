@@ -264,11 +264,11 @@ func (sb ServerBundle) newDuration(f *touchstone.Factory, labelNames []string, c
 // NewInstrumenter creates a constructor that can be passed to fx.Provide or annotated
 // as needed.
 //
-// The labelNamesAndValues are any extra, curried labels to apply to all the created
+// The namesAndValues are any extra, curried labels to apply to all the created
 // metrics.  If multiple calls to this method on the same ServerBundle instance are made,
 // the extra label names must match though the values may differ.
 //
-// If labelNamesAndValues contatins and odd number of entries or if it contains any of
+// If namesAndValues contatins and odd number of entries or if it contains any of
 // the reserved label names used by this package, and error is returned by the returned
 // constructor.
 //
@@ -277,25 +277,27 @@ func (sb ServerBundle) newDuration(f *touchstone.Factory, labelNames []string, c
 //   app := fx.New(
 //     touchstone.Provide(), // bootstraps the metrics environment
 //
-//     // Create a single, unnamed ServerInstrumenter with no extra labels
-//     touchhttp.ServerBundle{}.NewInstrumenter(),
+//     fx.Provide(
+//       // Create a single, unnamed ServerInstrumenter with no extra labels
+//       touchhttp.ServerBundle{}.NewInstrumenter(),
 //
-//     // Create a named ServerInstrumenter with a label identifying a particular server
-//     fx.Annotated{
-//       Name: "servers.main",
-//       Target: touchhttp.ServerBundle{}.NewInstrumenter(
-//         touchhttp.ServerLabel, "servers.main",
-//       ),
-//     },
+//       // Create a named ServerInstrumenter with a label identifying a particular server
+//       fx.Annotated{
+//         Name: "servers.main",
+//         Target: touchhttp.ServerBundle{}.NewInstrumenter(
+//           touchhttp.ServerLabel, "servers.main",
+//         ),
+//       },
+//     ),
 //   )
-func (sb ServerBundle) NewInstrumenter(labelNamesAndValues ...string) func(*touchstone.Factory) (ServerInstrumenter, error) {
+func (sb ServerBundle) NewInstrumenter(namesAndValues ...string) func(*touchstone.Factory) (ServerInstrumenter, error) {
 	return func(f *touchstone.Factory) (si ServerInstrumenter, err error) {
 		var (
 			extraNames []string
 			curry      prometheus.Labels
 		)
 
-		extraNames, curry, err = labelNames(labelNamesAndValues)
+		extraNames, curry, err = labelNames(namesAndValues)
 		if err != nil {
 			return
 		}
@@ -422,25 +424,27 @@ func (cb ClientBundle) newErrorCount(f *touchstone.Factory, labelNames []string,
 //   app := fx.New(
 //     touchstone.Provide(), // bootstraps the metrics environment
 //
-//     // Create a single, unnamed ClientInstrumenter with no extra labels
-//     touchhttp.ClientBundle{}.NewInstrumenter(),
+//     fx.Provide(
+//       // Create a single, unnamed ClientInstrumenter with no extra labels
+//       touchhttp.ClientBundle{}.NewInstrumenter(),
 //
-//     // Create a named ClientInstrumenter with a label identifying a particular client
-//     fx.Annotated{
-//       Name: "clients.main",
-//       Target: touchhttp.ClientBundle{}.NewInstrumenter(
-//         touchhttp.ClientLabel, "clients.main",
-//       ),
-//     },
+//       // Create a named ClientInstrumenter with a label identifying a particular client
+//       fx.Annotated{
+//         Name: "clients.main",
+//         Target: touchhttp.ClientBundle{}.NewInstrumenter(
+//           touchhttp.ClientLabel, "clients.main",
+//         ),
+//       },
+//     ),
 //   )
-func (cb ClientBundle) NewInstrumenter(labelNamesAndValues ...string) func(*touchstone.Factory) (ClientInstrumenter, error) {
+func (cb ClientBundle) NewInstrumenter(namesAndValues ...string) func(*touchstone.Factory) (ClientInstrumenter, error) {
 	return func(f *touchstone.Factory) (ci ClientInstrumenter, err error) {
 		var (
 			extraNames []string
 			curry      prometheus.Labels
 		)
 
-		extraNames, curry, err = labelNames(labelNamesAndValues)
+		extraNames, curry, err = labelNames(namesAndValues)
 		if err != nil {
 			return
 		}
