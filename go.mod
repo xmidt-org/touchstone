@@ -9,6 +9,6 @@ require (
 	github.com/stretchr/testify v1.8.2
 	github.com/xmidt-org/httpaux v0.3.2
 	go.uber.org/fx v1.19.2
-	go.uber.org/multierr v1.9.0
+	go.uber.org/multierr v1.10.0
 	go.uber.org/zap v1.24.0
 )
