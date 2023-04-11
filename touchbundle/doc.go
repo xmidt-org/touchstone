@@ -16,11 +16,7 @@
  */
 
 // Package touchbundle provides a simple way to create bundles of metrics
-// where the names of the metrics can be optionally tailored but the cardinality,
-// type, etc. cannot.
-//
-// Typical packages expect metrics to be of certain types, e.g. counter or gauge,
-// and to have certain labels.  But a package might wish to allow metric names
-// to be set through configuration or through application code.  This package aims
-// to provide a standard approach to this using structs and struct tags.
+// from configuration.  The basic idea is that a single description of metrics
+// can be used to both (1) create application metrics, and (2) verify those
+// metrics for tests.
 package touchbundle
