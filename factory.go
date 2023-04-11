@@ -37,7 +37,7 @@ var (
 // In addition, any DefaultNamespace and DefaultSubsystem set on the Config object
 // are enforced for every metric created through the Factory instance.
 //
-// If an fx.Printer is supplied, it is used to log warnings about missing Help
+// If a *zap.Logger is supplied, it is used to log warnings about missing Help
 // in *Opts structs.
 //
 // This package's functions that match metric types, e.g. Counter, CounterVec, etc, use
