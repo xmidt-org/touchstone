@@ -88,24 +88,24 @@ var (
 //
 // For example:
 //
-//     app := fx.New(
-//         touchbundle.Provide(MyMetrics{}),
-//         fx.Invoke(
-//             func(m MyMetrics) {
-//                 // m's metric fields will have been populated
-//             },
-//         ),
-//     )
+//	app := fx.New(
+//	    touchbundle.Provide(MyMetrics{}),
+//	    fx.Invoke(
+//	        func(m MyMetrics) {
+//	            // m's metric fields will have been populated
+//	        },
+//	    ),
+//	)
 //
-//     app := fx.New(
-//         touchbundle.Provide((*MyStruct)(nil)),
-//         fx.Invoke(
-//             func(m *MyMetrics) {
-//                 // m's metric fields will have been populated
-//                 // m will point to a distinct, new instance of MyMetrics
-//             },
-//         ),
-//     )
+//	app := fx.New(
+//	    touchbundle.Provide((*MyStruct)(nil)),
+//	    fx.Invoke(
+//	        func(m *MyMetrics) {
+//	            // m's metric fields will have been populated
+//	            // m will point to a distinct, new instance of MyMetrics
+//	        },
+//	    ),
+//	)
 func Provide(prototype interface{}) fx.Option {
 	var (
 		componentType = reflect.TypeOf(prototype)
