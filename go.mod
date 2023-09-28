@@ -3,7 +3,7 @@ module github.com/xmidt-org/touchstone
 go 1.15
 
 require (
-	github.com/go-kit/kit v0.12.0
+	github.com/go-kit/kit v0.13.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/prometheus/common v0.44.0
 	github.com/stretchr/testify v1.8.2
