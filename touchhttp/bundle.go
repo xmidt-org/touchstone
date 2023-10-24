@@ -1,19 +1,5 @@
-/**
- * Copyright 2022 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
+// SPDX-FileCopyrightText: 2022 Comcast Cable Communications Management, LLC
+// SPDX-License-Identifier: Apache-2.0
 
 package touchhttp
 
@@ -274,22 +260,22 @@ func (sb ServerBundle) newDuration(f *touchstone.Factory, labelNames []string, c
 //
 // Typical usage:
 //
-//   app := fx.New(
-//     touchstone.Provide(), // bootstraps the metrics environment
+//	app := fx.New(
+//	  touchstone.Provide(), // bootstraps the metrics environment
 //
-//     fx.Provide(
-//       // Create a single, unnamed ServerInstrumenter with no extra labels
-//       touchhttp.ServerBundle{}.NewInstrumenter(),
+//	  fx.Provide(
+//	    // Create a single, unnamed ServerInstrumenter with no extra labels
+//	    touchhttp.ServerBundle{}.NewInstrumenter(),
 //
-//       // Create a named ServerInstrumenter with a label identifying a particular server
-//       fx.Annotated{
-//         Name: "servers.main",
-//         Target: touchhttp.ServerBundle{}.NewInstrumenter(
-//           touchhttp.ServerLabel, "servers.main",
-//         ),
-//       },
-//     ),
-//   )
+//	    // Create a named ServerInstrumenter with a label identifying a particular server
+//	    fx.Annotated{
+//	      Name: "servers.main",
+//	      Target: touchhttp.ServerBundle{}.NewInstrumenter(
+//	        touchhttp.ServerLabel, "servers.main",
+//	      ),
+//	    },
+//	  ),
+//	)
 func (sb ServerBundle) NewInstrumenter(namesAndValues ...string) func(*touchstone.Factory) (ServerInstrumenter, error) {
 	return func(f *touchstone.Factory) (si ServerInstrumenter, err error) {
 		var (
@@ -421,22 +407,22 @@ func (cb ClientBundle) newErrorCount(f *touchstone.Factory, labelNames []string,
 //
 // Similar typical usage to ServerBundle.NewInstrumenter:
 //
-//   app := fx.New(
-//     touchstone.Provide(), // bootstraps the metrics environment
+//	app := fx.New(
+//	  touchstone.Provide(), // bootstraps the metrics environment
 //
-//     fx.Provide(
-//       // Create a single, unnamed ClientInstrumenter with no extra labels
-//       touchhttp.ClientBundle{}.NewInstrumenter(),
+//	  fx.Provide(
+//	    // Create a single, unnamed ClientInstrumenter with no extra labels
+//	    touchhttp.ClientBundle{}.NewInstrumenter(),
 //
-//       // Create a named ClientInstrumenter with a label identifying a particular client
-//       fx.Annotated{
-//         Name: "clients.main",
-//         Target: touchhttp.ClientBundle{}.NewInstrumenter(
-//           touchhttp.ClientLabel, "clients.main",
-//         ),
-//       },
-//     ),
-//   )
+//	    // Create a named ClientInstrumenter with a label identifying a particular client
+//	    fx.Annotated{
+//	      Name: "clients.main",
+//	      Target: touchhttp.ClientBundle{}.NewInstrumenter(
+//	        touchhttp.ClientLabel, "clients.main",
+//	      ),
+//	    },
+//	  ),
+//	)
 func (cb ClientBundle) NewInstrumenter(namesAndValues ...string) func(*touchstone.Factory) (ClientInstrumenter, error) {
 	return func(f *touchstone.Factory) (ci ClientInstrumenter, err error) {
 		var (
