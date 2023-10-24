@@ -1,19 +1,5 @@
-/**
- * Copyright 2022 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
+// SPDX-FileCopyrightText: 2022 Comcast Cable Communications Management, LLC
+// SPDX-License-Identifier: Apache-2.0
 
 package touchstone
 
@@ -96,37 +82,37 @@ func copyDefaults(dst, src reflect.Value) {
 // The primary use case for this function is setting up default options for
 // prometheus metrics:
 //
-//   // note that this can be any struct with fields named the same
-//   // as the prometheus xxxOpts struct
-//   defaults := prometheus.CounterOpts{
-//     Namespace: "default",
-//     // can set any other fields as defaults
-//   }
+//	// note that this can be any struct with fields named the same
+//	// as the prometheus xxxOpts struct
+//	defaults := prometheus.CounterOpts{
+//	  Namespace: "default",
+//	  // can set any other fields as defaults
+//	}
 //
-//   co := prometheus.CounterOpts{
-//     Name: "my_counter",
-//   }
+//	co := prometheus.CounterOpts{
+//	  Name: "my_counter",
+//	}
 //
-//   ApplyDefaults(&co, defaults) // in-place transfer to co
-//   c := prometheus.NewCounter(co)
+//	ApplyDefaults(&co, defaults) // in-place transfer to co
+//	c := prometheus.NewCounter(co)
 //
 // The result of ApplyDefaults is safe for casting to *dst, even if dst is nil:
 //
-//   defaults := prometheus.Opts{
-//     Namespace: "default",
-//     Subsystem: "default",
-//   }
+//	defaults := prometheus.Opts{
+//	  Namespace: "default",
+//	  Subsystem: "default",
+//	}
 //
-//   // creates a new opts
-//   co := ApplyDefaults((*prometheus.CounterOpts)(nil), defaults).(*prometheus.CounterOpts)
+//	// creates a new opts
+//	co := ApplyDefaults((*prometheus.CounterOpts)(nil), defaults).(*prometheus.CounterOpts)
 //
-//   // creates a new opts which is a clone of dst
-//   go := ApplyDefaults(prometheus.GaugeOpts{Name: "cloneme"}, defaults).(*prometheus.GaugeOpts)
+//	// creates a new opts which is a clone of dst
+//	go := ApplyDefaults(prometheus.GaugeOpts{Name: "cloneme"}, defaults).(*prometheus.GaugeOpts)
 //
-//   // can chain with the dynamic factory methods
-//   var f *Factory = /* ... */
-//   var co prometheus.CounterOpts
-//   f.New(ApplyDefaults(co, defaults)) // uses a distinct instance of prometheus.CounterOpts
+//	// can chain with the dynamic factory methods
+//	var f *Factory = /* ... */
+//	var co prometheus.CounterOpts
+//	f.New(ApplyDefaults(co, defaults)) // uses a distinct instance of prometheus.CounterOpts
 //
 // Note that this function does a shallow copy of any relevant fields.  In particular,
 // that means that a slice of buckets will point to the same data in the dst and src
