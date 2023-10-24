@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2022 Comcast Cable Communications Management, LLC
+// SPDX-License-Identifier: Apache-2.0
 package touchbundle
 
 import (
@@ -99,16 +101,16 @@ func toSnakeCase(identifier string) string {
 //
 // For example:
 //
-//    type Bundle struct {
-//        // metric name is:  something_count
-//        SomethingCount *prometheus.CounterVec `labelNames:"foo,bar"`
+//	type Bundle struct {
+//	    // metric name is:  something_count
+//	    SomethingCount *prometheus.CounterVec `labelNames:"foo,bar"`
 //
-//        // metric name is: prefix_my_gauge
-//        MyGauge *prometheus.GaugeVec `name:"prefix_*" labelNames:"foo,bar"`
+//	    // metric name is: prefix_my_gauge
+//	    MyGauge *prometheus.GaugeVec `name:"prefix_*" labelNames:"foo,bar"`
 //
-//        // metric name is: custom_name
-//        AnotherCounter prometheus.Counter `name:"custom_name"`
-//    }
+//	    // metric name is: custom_name
+//	    AnotherCounter prometheus.Counter `name:"custom_name"`
+//	}
 func MetricName(f reflect.StructField) string {
 	snakeCase := toSnakeCase(f.Name)
 	name := strings.Replace(
