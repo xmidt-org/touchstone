@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/go-kit/kit v0.13.0
-	github.com/prometheus/client_golang v1.17.0
+	github.com/prometheus/client_golang v1.18.0
 	github.com/prometheus/common v0.45.0
 	github.com/stretchr/testify v1.8.4
 	github.com/xmidt-org/httpaux v0.4.0
