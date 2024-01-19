@@ -5,7 +5,7 @@ package touchstone
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,7 +16,7 @@ import (
 func ExampleFactory() {
 	var f *Factory
 	_ = fx.New(
-		fx.Logger(log.New(ioutil.Discard, "", 0)),
+		fx.Logger(log.New(io.Discard, "", 0)),
 		Provide(),
 		fx.Populate(&f),
 	)
