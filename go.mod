@@ -1,13 +1,14 @@
 module github.com/xmidt-org/touchstone
 
 go 1.21
+toolchain go1.22.5
 
 require (
 	github.com/go-kit/kit v0.13.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/prometheus/common v0.47.0
 	github.com/stretchr/testify v1.9.0
-	github.com/xmidt-org/httpaux v0.4.0
+	github.com/xmidt-org/httpaux v0.4.1
 	go.uber.org/fx v1.22.1
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
