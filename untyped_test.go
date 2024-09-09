@@ -46,7 +46,7 @@ func (suite *NewUntypedFuncSuite) setupExpectation(v float64) io.Reader {
 
 	var (
 		output  = new(bytes.Buffer)
-		encoder = expfmt.NewEncoder(output, expfmt.FmtText)
+		encoder = expfmt.NewEncoder(output, expfmt.NewFormat(expfmt.TypeTextPlain))
 	)
 
 	if c, ok := encoder.(io.Closer); ok {

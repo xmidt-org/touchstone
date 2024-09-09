@@ -48,7 +48,7 @@ func (a *Assertions) Expect(g prometheus.Gatherer) *Assertions {
 	if err == nil {
 		a.buffer.Reset()
 		a.names = make(map[string]bool)
-		enc := expfmt.NewEncoder(&a.buffer, expfmt.FmtText)
+		enc := expfmt.NewEncoder(&a.buffer, expfmt.NewFormat(expfmt.TypeTextPlain))
 
 		if closer, ok := enc.(expfmt.Closer); ok {
 			defer closer.Close()
