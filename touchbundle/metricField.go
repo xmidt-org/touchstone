@@ -368,7 +368,7 @@ func (mf metricField) parseUint32(tagName string) (v uint32, err error) {
 	if len(tagValue) > 0 {
 		var u64 uint64
 		u64, err = strconv.ParseUint(tagValue, 10, 32)
-		v = uint32(u64)
+		v = uint32(u64) //nolint:gosec
 	}
 
 	return
