@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/go-kit/kit v0.13.0
 	github.com/prometheus/client_golang v1.20.4
-	github.com/prometheus/common v0.59.1
+	github.com/prometheus/common v0.60.0
 	github.com/stretchr/testify v1.9.0
 	github.com/xmidt-org/httpaux v0.4.0
 	go.uber.org/fx v1.22.2
