@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/go-kit/kit v0.13.0
 	github.com/prometheus/client_golang v1.21.1
-	github.com/prometheus/common v0.62.0
+	github.com/prometheus/common v0.63.0
 	github.com/stretchr/testify v1.10.0
 	github.com/xmidt-org/httpaux v0.4.0
 	go.uber.org/fx v1.23.0
@@ -24,7 +24,7 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	go.uber.org/dig v1.18.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	google.golang.org/protobuf v1.36.1 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
