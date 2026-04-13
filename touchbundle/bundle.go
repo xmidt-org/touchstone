@@ -54,7 +54,7 @@ func Populate(f *touchstone.Factory, b Bundle) error {
 	}
 
 	if bv.Kind() != reflect.Struct || !bv.CanAddr() {
-		return fmt.Errorf(
+		return fmt.Errorf( // nolint:staticcheck
 			"'%T' is not a valid bundle.  It must be a non-nil pointer to a struct.",
 			b,
 		)
@@ -107,7 +107,7 @@ func Provide(prototype interface{}) fx.Option {
 
 	default:
 		return fx.Error(
-			fmt.Errorf(
+			fmt.Errorf( // nolint:staticcheck
 				"'%T' is not a valid bundle prototype.  It is not a struct or pointer to struct.",
 				prototype,
 			),

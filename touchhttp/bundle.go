@@ -62,7 +62,7 @@ var (
 
 	// ErrInvalidLabelCount indicates that an odd number of name/value pairs were
 	// passed when creating metrics.
-	ErrInvalidLabelCount = errors.New("The number of label names and values must be even")
+	ErrInvalidLabelCount = errors.New("The number of label names and values must be even") // nolint:staticcheck
 
 	defaultServerCount = prometheus.CounterOpts{
 		Name: DefaultServerCount,
