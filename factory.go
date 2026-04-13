@@ -13,7 +13,7 @@ import (
 
 var (
 	// ErrNoMetricName indicates that a prometheus *Opts struct did not set the Name field.
-	ErrNoMetricName = errors.New("A metric Name is required")
+	ErrNoMetricName = errors.New("A metric Name is required") //nolint:staticcheck
 )
 
 // Factory handles creation and registration of metrics.

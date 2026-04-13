@@ -47,7 +47,7 @@ func (ep ErrorPrinter) Println(values ...interface{}) {
 		fmt.Fprint(&msg, v)
 	}
 
-	ep.Printer.Printf(msg.String())
+	ep.Printf(msg.String())
 }
 
 // InvalidErrorHandlingError is the error returned when Config.ErrorHandling
