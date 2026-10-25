@@ -5,8 +5,6 @@ package touchstone
 
 import (
 	"fmt"
-	"io"
-	"log"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -16,7 +14,7 @@ import (
 func ExampleFactory() {
 	var f *Factory
 	_ = fx.New(
-		fx.Logger(log.New(io.Discard, "", 0)),
+		fx.NopLogger,
 		Provide(),
 		fx.Populate(&f),
 	)

@@ -5,8 +5,6 @@ package touchstone
 
 import (
 	"fmt"
-	"io"
-	"log"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -21,7 +19,7 @@ func Example() {
 	}
 
 	_ = fx.New(
-		fx.Logger(log.New(io.Discard, "", 0)),
+		fx.NopLogger,
 		fx.Supply(
 			// this Config instance can come from anywhere
 			Config{
