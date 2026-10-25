@@ -15,8 +15,7 @@ import (
 func AsAlreadyRegisteredError(err error) *prometheus.AlreadyRegisteredError {
 	// NOTE: prometheus doesn't follow golang recommendations.  This error type
 	// is not a pointer receiver for Error().
-	var are prometheus.AlreadyRegisteredError
-	if errors.As(err, &are) {
+	if are, ok := errors.AsType[prometheus.AlreadyRegisteredError](err); ok {
 		return &are
 	}
 
