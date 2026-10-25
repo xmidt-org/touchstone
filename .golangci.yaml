@@ -3,19 +3,34 @@
 ---
 version: "2"
 linters:
+  # Linters enabled by default (errcheck, govet, ineffassign, staticcheck,
+  # unused) remain on.  These are added on top.
   enable:
     - bodyclose
+    - copyloopvar
     - dupl
     - errorlint
     - funlen
+    - gocritic
     - goconst
     - gosec
+    - intrange
     - misspell
+    - modernize
+    - nilerr
+    - nolintlint
+    - perfsprint
     - prealloc
+    - predeclared
+    - revive
+    - testifylint
+    - thelper
+    - tparallel
     - unconvert
-  disable:
-    - errcheck
-    - ineffassign
+    - unparam
+    - usestdlibvars
+    - wastedassign
+    - whitespace
   settings:
     errorlint:
       errorf: false
@@ -24,6 +39,11 @@ linters:
       statements: 60
     misspell:
       locale: US
+    testifylint:
+      disable:
+        # Suite-style tests read better with plain suite.NoError/Error;
+        # fail-fast via Require() is used where the test actually needs it.
+        - require-error
   exclusions:
     generated: lax
     presets:
@@ -32,15 +52,22 @@ linters:
       - legacy
       - std-error-handling
     rules:
+      # Test code favors readability: repeated literals, long table-driven
+      # functions, and similar-looking cases are clearer than factoring
+      # them out.
       - linters:
           - dupl
           - funlen
+          - goconst
         path: _test.go
     paths:
       - third_party$
       - builtin$
       - examples$
 formatters:
+  enable:
+    - gofmt
+    - goimports
   exclusions:
     generated: lax
     paths:

@@ -100,7 +100,7 @@ func (a *Assertions) CollectAndCompare(actual prometheus.Collector, metricNames 
 
 	return a.assert.NoErrorf(
 		err,
-		"Failed to match expected metrics", "names: %s",
+		"Failed to match expected metrics.  names: %s",
 		metricNames,
 	)
 }

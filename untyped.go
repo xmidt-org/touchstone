@@ -19,7 +19,7 @@ import (
 //
 // If f is not a function or is a function with an unsupported signature,
 // an error is returned.
-func NewUntypedFunc(opts prometheus.UntypedOpts, f interface{}) (uf prometheus.UntypedFunc, err error) {
+func NewUntypedFunc(opts prometheus.UntypedOpts, f any) (uf prometheus.UntypedFunc, err error) {
 	var untyped func() float64
 	switch fn := f.(type) {
 	case func() uint8: // handles byte

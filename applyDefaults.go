@@ -11,7 +11,7 @@ import "reflect"
 func copyDefaults(dst, src reflect.Value) {
 	sType := src.Type()
 	dType := dst.Type()
-	for i := 0; i < sType.NumField(); i++ {
+	for i := range sType.NumField() {
 		sField := sType.Field(i)
 		if len(sField.PkgPath) > 0 || sField.Anonymous {
 			// skip unexported or anonymous fields in src
@@ -117,9 +117,9 @@ func copyDefaults(dst, src reflect.Value) {
 // Note that this function does a shallow copy of any relevant fields.  In particular,
 // that means that a slice of buckets will point to the same data in the dst and src
 // after this function returns.
-func ApplyDefaults(dst, src interface{}) (result interface{}) {
+func ApplyDefaults(dst, src any) (result any) {
 	sValue := reflect.ValueOf(src)
-	if sValue.Kind() == reflect.Ptr {
+	if sValue.Kind() == reflect.Pointer {
 		if sValue.Type().Elem().Kind() != reflect.Struct {
 			panic("touchstone.ApplyDefaults: src must be nil, a pointer to struct, or a struct")
 		}
@@ -132,13 +132,15 @@ func ApplyDefaults(dst, src interface{}) (result interface{}) {
 	}
 
 	dValue := reflect.ValueOf(dst)
-	if dValue.Kind() == reflect.Struct {
+	switch {
+	case dValue.Kind() == reflect.Struct:
 		// create a new struct and return a pointer to it
 		pv := reflect.New(dValue.Type())
 		pv.Elem().Set(dValue)
 		dValue = pv.Elem() // dereference
 		result = pv.Interface()
-	} else if dValue.Kind() == reflect.Ptr && dValue.Type().Elem().Kind() == reflect.Struct {
+
+	case dValue.Kind() == reflect.Pointer && dValue.Type().Elem().Kind() == reflect.Struct:
 		if dValue.IsNil() {
 			// create a new struct and return a pointer to it
 			// since the pointer was nil, we can't set the new struct's fields
@@ -150,11 +152,12 @@ func ApplyDefaults(dst, src interface{}) (result interface{}) {
 			result = dValue.Interface()
 			dValue = dValue.Elem()
 		}
-	} else {
+
+	default:
 		panic("touchstone.ApplyDefaults: dst must be a struct or a pointer to struct")
 	}
 
-	if !sValue.IsValid() || (sValue.Kind() == reflect.Ptr && sValue.IsNil()) {
+	if !sValue.IsValid() || (sValue.Kind() == reflect.Pointer && sValue.IsNil()) {
 		// this covers both the case (1) where src == nil interface{}
 		// and (2) where src is a nil pointer
 		// we want to return the pointer to the dst value in this case,

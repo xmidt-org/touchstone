@@ -11,7 +11,7 @@ import (
 
 var (
 	// collectorType is the cached reflect.Type for a prometheus.Collector
-	collectorType = reflect.TypeOf((*prometheus.Collector)(nil)).Elem()
+	collectorType = reflect.TypeFor[prometheus.Collector]()
 )
 
 // CollectorAs attempts to set target to the given collector.  The target parameter
@@ -27,13 +27,13 @@ var (
 //   - if *target is not either:
 //   - a concrete type that implements prometheus.Collector (e.g. prometheus.CounterVec), OR
 //   - an arbitrary interface
-func CollectorAs(c prometheus.Collector, target interface{}) bool {
+func CollectorAs(c prometheus.Collector, target any) bool {
 	if target == nil {
 		panic("touchstone.CollectorAs: target must not be a nil interface")
 	}
 
 	tValue := reflect.ValueOf(target)
-	if tValue.Kind() != reflect.Ptr || tValue.IsNil() {
+	if tValue.Kind() != reflect.Pointer || tValue.IsNil() {
 		panic("touchstone.CollectorAs: target must be a non-nil pointer")
 	}
 

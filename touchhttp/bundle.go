@@ -62,7 +62,7 @@ var (
 
 	// ErrInvalidLabelCount indicates that an odd number of name/value pairs were
 	// passed when creating metrics.
-	ErrInvalidLabelCount = errors.New("The number of label names and values must be even") // nolint:staticcheck
+	ErrInvalidLabelCount = errors.New("The number of label names and values must be even") //nolint:staticcheck
 
 	defaultServerCount = prometheus.CounterOpts{
 		Name: DefaultServerCount,
@@ -159,7 +159,7 @@ func newGauge(f *touchstone.Factory, o prometheus.GaugeOpts, labelNames []string
 	return nil, err
 }
 
-func newObserverVec(f *touchstone.Factory, o interface{}, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
+func newObserverVec(f *touchstone.Factory, o any, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
 	ov, err := f.NewObserverVec(o, labelNames...)
 	err = touchstone.ExistingCollector(&ov, err)
 	if err == nil {
@@ -179,12 +179,12 @@ type ServerBundle struct {
 	// RequestSize describes the options for the request size observer.  If this
 	// field is set, it must be either a prometheus.HistogramOpts or a prometheus.SummaryOpts.
 	// The type of Opts struct will determine the type of metric created.
-	RequestSize interface{}
+	RequestSize any
 
 	// Duration describes the options for the request duration observer.  If this field is
 	// set, it must be either a prometheus.HistogramOpts or a prometheus.SummaryOpts.
 	// The type of Opts struct will determine the type of metric created.
-	Duration interface{}
+	Duration any
 
 	// Now is the strategy for extracting the current system time.  If unset,
 	// time.Now is used.
@@ -202,7 +202,7 @@ func (sb ServerBundle) newInFlight(f *touchstone.Factory, labelNames []string, c
 }
 
 func (sb ServerBundle) newRequestSize(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
-	var opts interface{}
+	var opts any
 	if sb.RequestSize != nil {
 		switch t := sb.RequestSize.(type) {
 		case prometheus.HistogramOpts:
@@ -225,7 +225,7 @@ func (sb ServerBundle) newRequestSize(f *touchstone.Factory, labelNames []string
 }
 
 func (sb ServerBundle) newDuration(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
-	var opts interface{}
+	var opts any
 	if sb.Duration != nil {
 		switch t := sb.Duration.(type) {
 		case prometheus.HistogramOpts:
@@ -327,11 +327,11 @@ type ClientBundle struct {
 	// RequestSize describes the options for the request size observer.  A panic
 	// will result if this field is not nil, a prometheus.HistogramOpts, or
 	// a prometheus.SummaryOpts.
-	RequestSize interface{}
+	RequestSize any
 
 	// Duration describes the options for the request duration observer.  A panic
 	// will result if this field is not either a prometheus.HistogramOpts or a prometheus.SummaryOpts.
-	Duration interface{}
+	Duration any
 
 	// ErrorCount describes the options for the error counter.
 	ErrorCount prometheus.CounterOpts
@@ -352,7 +352,7 @@ func (cb ClientBundle) newInFlight(f *touchstone.Factory, labelNames []string, c
 }
 
 func (cb ClientBundle) newRequestSize(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
-	var opts interface{}
+	var opts any
 	if cb.RequestSize != nil {
 		switch t := cb.RequestSize.(type) {
 		case prometheus.HistogramOpts:
@@ -375,7 +375,7 @@ func (cb ClientBundle) newRequestSize(f *touchstone.Factory, labelNames []string
 }
 
 func (cb ClientBundle) newDuration(f *touchstone.Factory, labelNames []string, curry prometheus.Labels) (prometheus.ObserverVec, error) {
-	var opts interface{}
+	var opts any
 	if cb.Duration != nil {
 		switch t := cb.Duration.(type) {
 		case prometheus.HistogramOpts:

@@ -155,9 +155,9 @@ func (suite *ApplyDefaultsTestSuite) TestApply() {
 	}
 
 	testCases := []struct {
-		dst      interface{}
-		src      interface{}
-		expected interface{}
+		dst      any
+		src      any
+		expected any
 	}{
 		{
 			dst: &prometheus.CounterOpts{

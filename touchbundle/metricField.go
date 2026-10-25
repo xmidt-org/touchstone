@@ -109,16 +109,16 @@ func (fe *FieldError) Error() string {
 }
 
 var (
-	counterType      = reflect.TypeOf((*prometheus.Counter)(nil)).Elem()
-	counterVecType   = reflect.TypeOf((*prometheus.CounterVec)(nil))
-	gaugeType        = reflect.TypeOf((*prometheus.Gauge)(nil)).Elem()
-	gaugeVecType     = reflect.TypeOf((*prometheus.GaugeVec)(nil))
-	histogramType    = reflect.TypeOf((*prometheus.Histogram)(nil)).Elem()
-	histogramVecType = reflect.TypeOf((*prometheus.HistogramVec)(nil))
-	summaryType      = reflect.TypeOf((*prometheus.Summary)(nil)).Elem()
-	summaryVecType   = reflect.TypeOf((*prometheus.SummaryVec)(nil))
-	observerType     = reflect.TypeOf((*prometheus.Observer)(nil)).Elem()
-	observerVecType  = reflect.TypeOf((*prometheus.ObserverVec)(nil)).Elem()
+	counterType      = reflect.TypeFor[prometheus.Counter]()
+	counterVecType   = reflect.TypeFor[*prometheus.CounterVec]()
+	gaugeType        = reflect.TypeFor[prometheus.Gauge]()
+	gaugeVecType     = reflect.TypeFor[*prometheus.GaugeVec]()
+	histogramType    = reflect.TypeFor[prometheus.Histogram]()
+	histogramVecType = reflect.TypeFor[*prometheus.HistogramVec]()
+	summaryType      = reflect.TypeFor[prometheus.Summary]()
+	summaryVecType   = reflect.TypeFor[*prometheus.SummaryVec]()
+	observerType     = reflect.TypeFor[prometheus.Observer]()
+	observerVecType  = reflect.TypeFor[prometheus.ObserverVec]()
 
 	histogramTagNames = []string{TagBuckets}
 	summaryTagNames   = []string{TagObjectives, TagMaxAge, TagAgeBuckets, TagBufCap}
@@ -206,7 +206,7 @@ func (mf metricField) newSummaryOpts() (opts prometheus.SummaryOpts, err error) 
 	return
 }
 
-func (mf metricField) newObserverOpts() (opts interface{}, err error) {
+func (mf metricField) newObserverOpts() (opts any, err error) {
 	var (
 		metricType        = mf.Tag.Get(TagType)
 		ambiguousTagNames []string
@@ -244,7 +244,7 @@ func (mf metricField) newObserverOpts() (opts interface{}, err error) {
 
 // newOpts creates a metric *Opts struct, along with label names, if this
 // field is of a type supported by touchstone.
-func (mf metricField) newOpts() (opts interface{}, labelNames []string, err error) {
+func (mf metricField) newOpts() (opts any, labelNames []string, err error) {
 	switch mf.Type {
 	case counterType:
 		opts, err = mf.newCounterOpts()
@@ -319,7 +319,7 @@ func (mf metricField) buckets() (buckets []float64, err error) {
 
 	tagValues := strings.Split(tagValue, ",")
 	buckets = make([]float64, len(tagValues))
-	for i := 0; i < len(tagValues); i++ {
+	for i := range tagValues {
 		var parseErr error
 		buckets[i], parseErr = strconv.ParseFloat(strings.TrimSpace(tagValues[i]), 64)
 		err = multierr.Append(err, parseErr)
@@ -338,7 +338,7 @@ func (mf metricField) objectives(appendErr error) (objectives map[float64]float6
 
 	tagValues := strings.Split(tagValue, ",")
 	objectives = make(map[float64]float64, len(tagValues))
-	for i := 0; i < len(tagValues); i++ {
+	for i := range tagValues {
 		pair := strings.Split(tagValues[i], ":")
 		if len(pair) != 2 {
 			err = multierr.Append(err,
@@ -368,7 +368,7 @@ func (mf metricField) parseUint32(tagName string) (v uint32, err error) {
 	if len(tagValue) > 0 {
 		var u64 uint64
 		u64, err = strconv.ParseUint(tagValue, 10, 32)
-		v = uint32(u64) //nolint:gosec
+		v = uint32(u64)
 	}
 
 	return
@@ -459,7 +459,7 @@ func (mf metricField) labelNames(appendErr error) (values []string, err error) {
 	return
 }
 
-func (mf metricField) fieldErrorf(format string, args ...interface{}) *FieldError {
+func (mf metricField) fieldErrorf(format string, args ...any) *FieldError {
 	return &FieldError{
 		Field:   reflect.StructField(mf),
 		Message: fmt.Sprintf(format, args...),

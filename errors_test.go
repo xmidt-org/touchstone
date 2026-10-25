@@ -51,12 +51,12 @@ type ExistingCollectorTestSuite struct {
 
 func (suite *ExistingCollectorTestSuite) TestNilError() {
 	suite.Run("NilTarget", func() {
-		suite.Nil(ExistingCollector(nil, nil))
+		suite.NoError(ExistingCollector(nil, nil))
 	})
 
 	suite.Run("WithTarget", func() {
 		var cv *prometheus.CounterVec
-		suite.Nil(ExistingCollector(&cv, nil))
+		suite.NoError(ExistingCollector(&cv, nil))
 		suite.Nil(cv)
 	})
 }
@@ -89,7 +89,7 @@ func (suite *ExistingCollectorTestSuite) TestAlreadyRegisteredError() {
 		}
 
 		suite.Panics(func() {
-			ExistingCollector(nil, input)
+			_ = ExistingCollector(nil, input)
 		})
 	})
 
@@ -106,7 +106,7 @@ func (suite *ExistingCollectorTestSuite) TestAlreadyRegisteredError() {
 		}
 
 		var c prometheus.Counter
-		suite.Nil(ExistingCollector(&c, input))
+		suite.NoError(ExistingCollector(&c, input))
 		suite.Equal(input.ExistingCollector, c)
 	})
 }

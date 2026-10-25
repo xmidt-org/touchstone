@@ -4,7 +4,6 @@
 package touchhttp
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -23,7 +22,7 @@ type ErrorPrinterTestSuite struct {
 
 // Printf lets this suite be seen as an fx.Printer.  Output is redirected
 // to an internal buffer for verification.
-func (suite *ErrorPrinterTestSuite) Printf(format string, args ...interface{}) {
+func (suite *ErrorPrinterTestSuite) Printf(format string, args ...any) {
 	fmt.Fprintf(&suite.output, format, args...)
 }
 
@@ -42,7 +41,7 @@ func (suite *ErrorPrinterTestSuite) TestNoArguments() {
 }
 
 func (suite *ErrorPrinterTestSuite) TestPrintln() {
-	testCases := [][]interface{}{
+	testCases := [][]any{
 		{"test"},
 		{"test", 123, 18 * time.Millisecond},
 	}
@@ -53,7 +52,7 @@ func (suite *ErrorPrinterTestSuite) TestPrintln() {
 
 			ep.Println(testCase...)
 			fields := strings.Split(suite.output.String(), " ")
-			suite.Equal(len(testCase), len(fields))
+			suite.Len(fields, len(testCase))
 		})
 	}
 }
@@ -76,7 +75,7 @@ func (suite *NewHandlerOptsTestSuite) SetupTest() {
 
 // Printf lets this suite be seen as an fx.Printer.  Output is redirected
 // to an internal buffer for verification.
-func (suite *NewHandlerOptsTestSuite) Printf(format string, args ...interface{}) {
+func (suite *NewHandlerOptsTestSuite) Printf(format string, args ...any) {
 	fmt.Fprintf(&suite.output, format, args...)
 }
 
@@ -130,7 +129,7 @@ func (suite *NewHandlerOptsTestSuite) TestErrorHandlingValues() {
 		suite.Error(err)
 
 		var actualErr *InvalidErrorHandlingError
-		suite.Require().True(errors.As(err, &actualErr))
+		suite.Require().ErrorAs(err, &actualErr)
 		suite.NotEmpty(actualErr.Error())
 	})
 

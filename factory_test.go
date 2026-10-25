@@ -16,7 +16,7 @@ type FactoryTestSuite struct {
 	FxTestSuite
 }
 
-func (suite *FactoryTestSuite) newFactory(cfg Config) (*Factory, prometheus.Gatherer, prometheus.Registerer) {
+func (suite *FactoryTestSuite) newFactory(cfg Config) (*Factory, prometheus.Gatherer) {
 	g, r, err := New(cfg)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(r)
@@ -25,7 +25,7 @@ func (suite *FactoryTestSuite) newFactory(cfg Config) (*Factory, prometheus.Gath
 	suite.Require().NotNil(f)
 	suite.Equal(cfg.DefaultNamespace, f.DefaultNamespace())
 	suite.Equal(cfg.DefaultSubsystem, f.DefaultSubsystem())
-	return f, g, r
+	return f, g
 }
 
 func (suite *FactoryTestSuite) newAssertions(g prometheus.Gatherer) *touchtest.Assertions {
@@ -36,7 +36,7 @@ func (suite *FactoryTestSuite) newAssertions(g prometheus.Gatherer) *touchtest.A
 // labelsPresent checks that the given metric has a series of label names.
 // Note that this method typically must be used before a *touchtest.Assertions,
 // since the act of getting a metric with labels causes it to show up in the gatherer.
-func (suite *FactoryTestSuite) labelsPresent(v interface{}, labelNames ...string) {
+func (suite *FactoryTestSuite) labelsPresent(v any, labelNames ...string) {
 	l := make(prometheus.Labels, len(labelNames))
 	for i, labelName := range labelNames {
 		l[labelName] = "value" + strconv.Itoa(i)
@@ -70,16 +70,16 @@ func (suite *FactoryTestSuite) labelsPresent(v interface{}, labelNames ...string
 
 func (suite *FactoryTestSuite) TestNew() {
 	suite.Run("InvalidOpts", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		suite.Panics(func() {
-			f.New(123)
+			_, _ = f.New(123)
 		})
 	})
 
 	testCases := []struct {
 		metricName string
-		opts       interface{}
-		implements interface{}
+		opts       any
+		implements any
 	}{
 		{
 			metricName: "test",
@@ -149,7 +149,7 @@ func (suite *FactoryTestSuite) TestNew() {
 
 	for i, testCase := range testCases {
 		suite.Run(strconv.Itoa(i), func() {
-			f, g, _ := suite.newFactory(Config{
+			f, g := suite.newFactory(Config{
 				DefaultNamespace: "n",
 				DefaultSubsystem: "s",
 			})
@@ -167,16 +167,16 @@ func (suite *FactoryTestSuite) TestNew() {
 
 func (suite *FactoryTestSuite) TestNewVec() {
 	suite.Run("InvalidOpts", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		suite.Panics(func() {
-			f.NewVec(123)
+			_, _ = f.NewVec(123)
 		})
 	})
 
 	testCases := []struct {
 		metricName string
-		opts       interface{}
-		isType     interface{}
+		opts       any
+		isType     any
 	}{
 		{
 			metricName: "test",
@@ -246,7 +246,7 @@ func (suite *FactoryTestSuite) TestNewVec() {
 
 	for i, testCase := range testCases {
 		suite.Run(strconv.Itoa(i), func() {
-			f, g, _ := suite.newFactory(Config{
+			f, g := suite.newFactory(Config{
 				DefaultNamespace: "n",
 				DefaultSubsystem: "s",
 			})
@@ -265,14 +265,14 @@ func (suite *FactoryTestSuite) TestNewVec() {
 
 func (suite *FactoryTestSuite) TestNewCounter() {
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewCounter(prometheus.CounterOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewCounter(prometheus.CounterOpts{Name: "test"})
 		suite.NoError(err)
 		suite.NotNil(m)
@@ -282,7 +282,7 @@ func (suite *FactoryTestSuite) TestNewCounter() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -297,7 +297,7 @@ func (suite *FactoryTestSuite) TestNewCounter() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -320,14 +320,14 @@ func (suite *FactoryTestSuite) TestNewCounterFunc() {
 	fn := func() float64 { return 1.0 }
 
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewCounterFunc(prometheus.CounterOpts{}, fn)
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewCounterFunc(prometheus.CounterOpts{Name: "test"}, fn)
 		suite.NoError(err)
 		suite.NotNil(m)
@@ -337,7 +337,7 @@ func (suite *FactoryTestSuite) TestNewCounterFunc() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -352,7 +352,7 @@ func (suite *FactoryTestSuite) TestNewCounterFunc() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -374,14 +374,14 @@ func (suite *FactoryTestSuite) TestNewCounterFunc() {
 
 func (suite *FactoryTestSuite) TestNewCounterVec() {
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewCounterVec(prometheus.CounterOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewCounterVec(prometheus.CounterOpts{Name: "test"}, "label1")
 		suite.NoError(err)
 		suite.labelsPresent(m, "label1")
@@ -391,7 +391,7 @@ func (suite *FactoryTestSuite) TestNewCounterVec() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -406,7 +406,7 @@ func (suite *FactoryTestSuite) TestNewCounterVec() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -428,14 +428,14 @@ func (suite *FactoryTestSuite) TestNewCounterVec() {
 
 func (suite *FactoryTestSuite) TestNewGauge() {
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewGauge(prometheus.GaugeOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewGauge(prometheus.GaugeOpts{Name: "test"})
 		suite.NoError(err)
 		suite.NotNil(m)
@@ -445,7 +445,7 @@ func (suite *FactoryTestSuite) TestNewGauge() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -460,7 +460,7 @@ func (suite *FactoryTestSuite) TestNewGauge() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -483,14 +483,14 @@ func (suite *FactoryTestSuite) TestNewGaugeFunc() {
 	fn := func() float64 { return 1.0 }
 
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewGaugeFunc(prometheus.GaugeOpts{}, fn)
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewGaugeFunc(prometheus.GaugeOpts{Name: "test"}, fn)
 		suite.NoError(err)
 		suite.NotNil(m)
@@ -500,7 +500,7 @@ func (suite *FactoryTestSuite) TestNewGaugeFunc() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -515,7 +515,7 @@ func (suite *FactoryTestSuite) TestNewGaugeFunc() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -537,14 +537,14 @@ func (suite *FactoryTestSuite) TestNewGaugeFunc() {
 
 func (suite *FactoryTestSuite) TestNewGaugeVec() {
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewGaugeVec(prometheus.GaugeOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewGaugeVec(prometheus.GaugeOpts{Name: "test"}, "label1")
 		suite.NoError(err)
 		suite.labelsPresent(m, "label1")
@@ -554,7 +554,7 @@ func (suite *FactoryTestSuite) TestNewGaugeVec() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -569,7 +569,7 @@ func (suite *FactoryTestSuite) TestNewGaugeVec() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -593,14 +593,14 @@ func (suite *FactoryTestSuite) TestNewUntypedFunc() {
 	fn := func() float64 { return 1.0 }
 
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewUntypedFunc(prometheus.UntypedOpts{}, fn)
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewUntypedFunc(prometheus.UntypedOpts{Name: "test"}, fn)
 		suite.NoError(err)
 		suite.NotNil(m)
@@ -610,7 +610,7 @@ func (suite *FactoryTestSuite) TestNewUntypedFunc() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -625,7 +625,7 @@ func (suite *FactoryTestSuite) TestNewUntypedFunc() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -647,14 +647,14 @@ func (suite *FactoryTestSuite) TestNewUntypedFunc() {
 
 func (suite *FactoryTestSuite) TestNewHistogram() {
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewHistogram(prometheus.HistogramOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewHistogram(prometheus.HistogramOpts{Name: "test"})
 		suite.NoError(err)
 		suite.NotNil(m)
@@ -664,7 +664,7 @@ func (suite *FactoryTestSuite) TestNewHistogram() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -679,7 +679,7 @@ func (suite *FactoryTestSuite) TestNewHistogram() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -700,14 +700,14 @@ func (suite *FactoryTestSuite) TestNewHistogram() {
 
 func (suite *FactoryTestSuite) TestNewHistogramVec() {
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewHistogramVec(prometheus.HistogramOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewHistogramVec(prometheus.HistogramOpts{Name: "test"}, "label1")
 		suite.NoError(err)
 		suite.labelsPresent(m, "label1")
@@ -717,7 +717,7 @@ func (suite *FactoryTestSuite) TestNewHistogramVec() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -732,7 +732,7 @@ func (suite *FactoryTestSuite) TestNewHistogramVec() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -754,14 +754,14 @@ func (suite *FactoryTestSuite) TestNewHistogramVec() {
 
 func (suite *FactoryTestSuite) TestNewSummary() {
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewSummary(prometheus.SummaryOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewSummary(prometheus.SummaryOpts{Name: "test"})
 		suite.NoError(err)
 		suite.NotNil(m)
@@ -771,7 +771,7 @@ func (suite *FactoryTestSuite) TestNewSummary() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -786,7 +786,7 @@ func (suite *FactoryTestSuite) TestNewSummary() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -807,14 +807,14 @@ func (suite *FactoryTestSuite) TestNewSummary() {
 
 func (suite *FactoryTestSuite) TestNewSummaryVec() {
 	suite.Run("NoName", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		m, err := f.NewSummaryVec(prometheus.SummaryOpts{})
 		suite.ErrorIs(err, ErrNoMetricName)
 		suite.Nil(m)
 	})
 
 	suite.Run("NoDefaults", func() {
-		f, g, _ := suite.newFactory(Config{})
+		f, g := suite.newFactory(Config{})
 		m, err := f.NewSummaryVec(prometheus.SummaryOpts{Name: "test"}, "label1")
 		suite.NoError(err)
 		suite.labelsPresent(m, "label1")
@@ -824,7 +824,7 @@ func (suite *FactoryTestSuite) TestNewSummaryVec() {
 	})
 
 	suite.Run("Defaults", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -839,7 +839,7 @@ func (suite *FactoryTestSuite) TestNewSummaryVec() {
 	})
 
 	suite.Run("Overrides", func() {
-		f, g, _ := suite.newFactory(Config{
+		f, g := suite.newFactory(Config{
 			DefaultNamespace: "n",
 			DefaultSubsystem: "s",
 		})
@@ -861,16 +861,16 @@ func (suite *FactoryTestSuite) TestNewSummaryVec() {
 
 func (suite *FactoryTestSuite) TestNewObserver() {
 	suite.Run("InvalidOpts", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		suite.Panics(func() {
-			f.NewObserver(prometheus.CounterOpts{})
+			_, _ = f.NewObserver(prometheus.CounterOpts{})
 		})
 	})
 
 	testCases := []struct {
 		metricName string
-		opts       interface{}
-		implements interface{}
+		opts       any
+		implements any
 	}{
 		{
 			metricName: "test",
@@ -908,7 +908,7 @@ func (suite *FactoryTestSuite) TestNewObserver() {
 
 	for i, testCase := range testCases {
 		suite.Run(strconv.Itoa(i), func() {
-			f, g, _ := suite.newFactory(Config{
+			f, g := suite.newFactory(Config{
 				DefaultNamespace: "n",
 				DefaultSubsystem: "s",
 			})
@@ -926,16 +926,16 @@ func (suite *FactoryTestSuite) TestNewObserver() {
 
 func (suite *FactoryTestSuite) TestNewObserverVec() {
 	suite.Run("InvalidOpts", func() {
-		f, _, _ := suite.newFactory(Config{})
+		f, _ := suite.newFactory(Config{})
 		suite.Panics(func() {
-			f.NewObserverVec(prometheus.CounterOpts{})
+			_, _ = f.NewObserverVec(prometheus.CounterOpts{})
 		})
 	})
 
 	testCases := []struct {
 		metricName string
-		opts       interface{}
-		isType     interface{}
+		opts       any
+		isType     any
 	}{
 		{
 			metricName: "test",
@@ -973,7 +973,7 @@ func (suite *FactoryTestSuite) TestNewObserverVec() {
 
 	for i, testCase := range testCases {
 		suite.Run(strconv.Itoa(i), func() {
-			f, g, _ := suite.newFactory(Config{
+			f, g := suite.newFactory(Config{
 				DefaultNamespace: "n",
 				DefaultSubsystem: "s",
 			})
