@@ -13,12 +13,12 @@ import (
 )
 
 // Bundle represents a group of metrics.  A bundle must always be a non-nil pointer to struct.
-type Bundle interface{}
+type Bundle any
 
 // populate is the common function for filling out a bundle struct.  The supplied reflect.Value
 // must be an addressable, settable struct.
 func populate(factory *touchstone.Factory, bundle reflect.Value) (err error) {
-	for i := 0; i < bundle.NumField(); i++ {
+	for i := range bundle.NumField() {
 		f := metricField(bundle.Type().Field(i))
 		if f.skip() {
 			continue
@@ -30,7 +30,7 @@ func populate(factory *touchstone.Factory, bundle reflect.Value) (err error) {
 			continue
 		}
 
-		var metric interface{}
+		var metric any
 		if len(labelNames) > 0 {
 			metric, fieldErr = factory.NewVec(opts, labelNames...)
 		} else {
@@ -49,13 +49,13 @@ func populate(factory *touchstone.Factory, bundle reflect.Value) (err error) {
 // Populate fills out a bundle with metrics created by the given Factory.
 func Populate(f *touchstone.Factory, b Bundle) error {
 	bv := reflect.ValueOf(b)
-	if bv.Kind() == reflect.Ptr && !bv.IsNil() {
+	if bv.Kind() == reflect.Pointer && !bv.IsNil() {
 		bv = bv.Elem()
 	}
 
 	if bv.Kind() != reflect.Struct || !bv.CanAddr() {
-		return fmt.Errorf( // nolint:staticcheck
-			"'%T' is not a valid bundle.  It must be a non-nil pointer to a struct.",
+		return fmt.Errorf(
+			"'%T' is not a valid bundle.  It must be a non-nil pointer to a struct",
 			b,
 		)
 	}
@@ -64,8 +64,8 @@ func Populate(f *touchstone.Factory, b Bundle) error {
 }
 
 var (
-	errorType   = reflect.TypeOf((*error)(nil)).Elem()
-	factoryType = reflect.TypeOf((*touchstone.Factory)(nil))
+	errorType   = reflect.TypeFor[error]()
+	factoryType = reflect.TypeFor[*touchstone.Factory]()
 )
 
 // Provide emits a bundle as an uber/fx component.  The supplied prototype must be
@@ -92,7 +92,7 @@ var (
 //	        },
 //	    ),
 //	)
-func Provide(prototype interface{}) fx.Option {
+func Provide(prototype any) fx.Option {
 	var (
 		componentType = reflect.TypeOf(prototype)
 		structType    reflect.Type
@@ -102,13 +102,13 @@ func Provide(prototype interface{}) fx.Option {
 	case componentType.Kind() == reflect.Struct:
 		structType = componentType
 
-	case componentType.Kind() == reflect.Ptr && componentType.Elem().Kind() == reflect.Struct:
+	case componentType.Kind() == reflect.Pointer && componentType.Elem().Kind() == reflect.Struct:
 		structType = componentType.Elem()
 
 	default:
 		return fx.Error(
-			fmt.Errorf( // nolint:staticcheck
-				"'%T' is not a valid bundle prototype.  It is not a struct or pointer to struct.",
+			fmt.Errorf(
+				"'%T' is not a valid bundle prototype.  It is not a struct or pointer to struct",
 				prototype,
 			),
 		)
@@ -137,7 +137,7 @@ func Provide(prototype interface{}) fx.Option {
 				)
 			}
 
-			if componentType.Kind() == reflect.Ptr {
+			if componentType.Kind() == reflect.Pointer {
 				out[0] = bundleValue
 			} else {
 				out[0] = bundleValue.Elem()

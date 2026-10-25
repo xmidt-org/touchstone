@@ -44,7 +44,7 @@ func AsAlreadyRegisteredError(err error) *prometheus.AlreadyRegisteredError {
 //	cv := prometheus.NewCounterVec(/* ... */)
 //	err := r.Register(cv)
 //	err = touchstone.ExistingCollector(&cv, err) // note the &cv to replace cv with the existing counter vec
-func ExistingCollector(target interface{}, err error) error {
+func ExistingCollector(target any, err error) error {
 	if are := AsAlreadyRegisteredError(err); are != nil {
 		if CollectorAs(are.ExistingCollector, target) {
 			return nil

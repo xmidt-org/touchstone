@@ -92,7 +92,7 @@ func (f *Factory) DefaultSubsystem() string {
 //   - *prometheus.HistogramOpts
 //   - prometheus.SummaryOpts
 //   - *prometheus.SummaryOpts
-func (f *Factory) New(o interface{}) (m prometheus.Collector, err error) {
+func (f *Factory) New(o any) (m prometheus.Collector, err error) {
 	switch opts := o.(type) {
 	case prometheus.CounterOpts:
 		m, err = f.NewCounter(opts)
@@ -155,7 +155,7 @@ func (f *Factory) New(o interface{}) (m prometheus.Collector, err error) {
 //   - *prometheus.HistogramOpts
 //   - prometheus.SummaryOpts
 //   - *prometheus.SummaryOpts
-func (f *Factory) NewVec(o interface{}, labelNames ...string) (m prometheus.Collector, err error) {
+func (f *Factory) NewVec(o any, labelNames ...string) (m prometheus.Collector, err error) {
 	switch opts := o.(type) {
 	case prometheus.CounterOpts:
 		m, err = f.NewCounterVec(opts, labelNames...)
@@ -309,7 +309,7 @@ func (f *Factory) NewGaugeVec(o prometheus.GaugeOpts, labelNames ...string) (m *
 // and subsystem are defaulted appropriately if not set in the options.
 //
 // See: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#NewUntypedFunc
-func (f *Factory) NewUntypedFunc(o prometheus.UntypedOpts, fn interface{}) (m prometheus.UntypedFunc, err error) {
+func (f *Factory) NewUntypedFunc(o prometheus.UntypedOpts, fn any) (m prometheus.UntypedFunc, err error) {
 	err = f.checkName(o.Name)
 	if err == nil {
 		ApplyDefaults(&o, f.defaults)
@@ -411,7 +411,7 @@ func (f *Factory) NewSummaryVec(o prometheus.SummaryOpts, labelNames ...string) 
 // NewObserver creates a histogram or a summary, depending on the concrete type
 // of the first parameter.  This method panics if o is not a prometheus.HistogramOpts
 // or a prometheus.SummaryOpts.
-func (f *Factory) NewObserver(o interface{}) (m prometheus.Observer, err error) {
+func (f *Factory) NewObserver(o any) (m prometheus.Observer, err error) {
 	switch opts := o.(type) {
 	case prometheus.HistogramOpts:
 		m, err = f.NewHistogram(opts)
@@ -435,7 +435,7 @@ func (f *Factory) NewObserver(o interface{}) (m prometheus.Observer, err error) 
 // NewObserverVec creates a histogram vector or a summary vector, depending on the concrete
 // type of the first parameter.  This method panics if o is not a prometheus.HistogramOpts,
 // a prometheus.SummaryOpts, or a pointer to either.
-func (f *Factory) NewObserverVec(o interface{}, labelNames ...string) (m prometheus.ObserverVec, err error) {
+func (f *Factory) NewObserverVec(o any, labelNames ...string) (m prometheus.ObserverVec, err error) {
 	switch opts := o.(type) {
 	case prometheus.HistogramOpts:
 		m, err = f.NewHistogramVec(opts, labelNames...)

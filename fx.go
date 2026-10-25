@@ -58,7 +58,7 @@ func Provide() fx.Option {
 // If name is empty, application startup is short-circuited with an error.
 //
 // See: https://pkg.go.dev/go.uber.org/fx#Annotated
-func Metric(name string, target interface{}) fx.Option {
+func Metric(name string, target any) fx.Option {
 	if len(name) == 0 {
 		return fx.Error(ErrNoMetricName)
 	}

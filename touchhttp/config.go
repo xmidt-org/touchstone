@@ -35,7 +35,7 @@ type ErrorPrinter struct {
 }
 
 // Println satisfies the promhttp.Logger interface.
-func (ep ErrorPrinter) Println(values ...interface{}) {
+func (ep ErrorPrinter) Println(values ...any) {
 	var msg strings.Builder
 
 	// we want Fprintln behavior, but we don't want the trailing newline
@@ -59,7 +59,7 @@ type InvalidErrorHandlingError struct {
 
 // Error satisfies the error interface.
 func (e *InvalidErrorHandlingError) Error() string {
-	return fmt.Sprintf("Invalid ErrorHandling value: %s", e.Value)
+	return "Invalid ErrorHandling value: " + e.Value
 }
 
 // Config is the configuration for boostrapping the promhttp package.

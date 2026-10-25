@@ -66,7 +66,7 @@ func (suite *NewUntypedFuncSuite) setupExpectation(v float64) io.Reader {
 func (suite *NewUntypedFuncSuite) TestSupportedType() {
 	testCases := []struct {
 		description string
-		f           interface{}
+		f           any
 		expected    float64
 	}{
 		{
@@ -150,7 +150,7 @@ func (suite *NewUntypedFuncSuite) TestSupportedType() {
 func (suite *NewUntypedFuncSuite) TestUnsupportedType() {
 	testCases := []struct {
 		description string
-		f           interface{}
+		f           any
 	}{
 		{
 			description: "nil",

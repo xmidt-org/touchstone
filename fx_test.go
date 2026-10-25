@@ -118,7 +118,7 @@ func (suite *MetricTestSuite) testMissingName(o fx.Option) {
 
 // testSuccess verifies that a metric got created.  the f parameter is an invoke
 // function that is expected to do verification specific to the type of metric.
-func (suite *MetricTestSuite) testSuccess(o fx.Option, f interface{}) {
+func (suite *MetricTestSuite) testSuccess(o fx.Option, f any) {
 	app := suite.newTestApp(
 		Provide(),
 		o,

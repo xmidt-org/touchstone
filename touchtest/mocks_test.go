@@ -14,7 +14,7 @@ type mockTestingT struct {
 	failures int
 }
 
-func (m *mockTestingT) Errorf(format string, args ...interface{}) {
+func (m *mockTestingT) Errorf(format string, args ...any) {
 	m.errors++
 	m.t.Logf("<DEBUG> "+format+" <DEBUG>", args...)
 }
